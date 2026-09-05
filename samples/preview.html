@@ -386,6 +386,7 @@ h2 {
 .ramp-cell .meta b { display: block; font-size: 12px; }
 .ramp-cell .meta span { color: var(--text-muted); font-variant-numeric: tabular-nums; word-break: break-all; }
 .usage { color: var(--text-muted); display: block; margin-top: 2px; font-size: 10px; }
+.usage.intent { color: var(--text-secondary); font-weight: 600; }
 .usage code { background: var(--bg-surface-subtle); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 0 4px; }
 
 /* ---- token cards ---- */
@@ -527,7 +528,7 @@ h2 {
   <!-- brand shade scale -->
   <section>
     <h2>Brand Shade Scale</h2>
-    <p class="section-note">12-step chromatic ramp at the brand hue — 1 near-white tint, 12 near-black shade. Hover a cell for the step legend (adapted from the article's 50–950 guide).</p>
+    <p class="section-note">12-step chromatic ramp at the brand hue — 1 near-white tint, 12 near-black shade. Each cell labels its functional intent below the token (surfaces 1–5 → borders 6–8 → text 9–12); hover still shows the full legend from the article's 50–950 guide. No hover required to read the intent.</p>
     <div class="ramp" id="brand-ramp"></div>
   </section>
 
@@ -596,7 +597,7 @@ h2 {
   <!-- status shade scales -->
   <section>
     <h2>Status Shade Scales</h2>
-    <p class="section-note">One 12-step ramp per canonical hue; steps share the neutral lightness ladder but peak chroma mid-scale. Dark theme scales back ~10% (article Step 6).</p>
+    <p class="section-note">One 12-step ramp per canonical hue; steps share the neutral lightness ladder but peak chroma mid-scale. Dark theme scales back ~10% (article Step 6). Each cell labels its functional intent — no hover required.</p>
     <div id="status-scales"></div>
   </section>
 
@@ -764,7 +765,10 @@ const brandRampEl = document.getElementById('brand-ramp');
 if (brandRampEl) {
   brandRampEl.innerHTML = Array.from({length: 12}, (_, i) => {
     const n = i+1;
-    return `<div class="ramp-cell" title="${legend[n]}"><div class="fill" style="background: var(--brand-${n});"></div><div class="meta"><b>brand-${n}</b><span>var(--brand-${n})</span><span class="usage">${legend[n].split(" — ")[0]}</span></div></div>`;
+    const parts = legend[n].split(" — ");
+    const desc = parts[0];
+    const intent = parts[1];
+    return `<div class="ramp-cell" title="${legend[n]}"><div class="fill" style="background: var(--brand-${n});"></div><div class="meta"><b>brand-${n}</b><span>var(--brand-${n})</span><span class="usage">${desc}</span>${intent ? `<span class="usage intent">→ ${intent}</span>` : ""}</div></div>`;
   }).join('');
 }
 
@@ -776,7 +780,10 @@ if (statusScalesEl) {
       <div class="ramp">
         ${Array.from({length: 12}, (_, i) => {
           const n = i+1;
-          return `<div class="ramp-cell" title="${legend[n]}"><div class="fill" style="background: var(--${family}-${n});"></div><div class="meta"><b>${family}-${n}</b><span>var(--${family}-${n})</span><span class="usage">${legend[n].split(" — ")[0]}</span></div></div>`;
+          const parts = legend[n].split(" — ");
+          const desc = parts[0];
+          const intent = parts[1];
+          return `<div class="ramp-cell" title="${legend[n]}"><div class="fill" style="background: var(--${family}-${n});"></div><div class="meta"><b>${family}-${n}</b><span>var(--${family}-${n})</span><span class="usage">${desc}</span>${intent ? `<span class="usage intent">→ ${intent}</span>` : ""}</div></div>`;
         }).join('')}
       </div>
     </div>`).join('');
