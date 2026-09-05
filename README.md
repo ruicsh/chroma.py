@@ -438,6 +438,16 @@ All tests pass (73 test cases and counting).
 
 ---
 
+## References
+
+- [CSS Color 4 — W3C](https://www.w3.org/TR/css-color-4/) — the OKLCH / OKLab color space standard that underpins chroma's perceptual math.
+- [Radix UI Colors](https://www.radix-ui.com/colors) — the 12-step scale protocol whose monotonic interpolation curves chroma implements.
+- [Atmos UI — How to build a color system](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design) — the token taxonomy tiers (global → semantic) chroma compiles against.
+- [W3C Design Tokens Community Group](https://tr.designtokens.org/format/) — the DTCG JSON format emitted by `--format dtcg` / `figma`.
+- [Style Dictionary](https://styledictionary.com/) — compatible ingestion tool for chroma's DTCG output.
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
