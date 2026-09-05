@@ -39,7 +39,7 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 
 ### 1. Global Tokens (the raw math)
 
-The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue) plus the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`).
+The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue), the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`), the **brand shade scale** (`brand-1` … `brand-12`, a 12-step chromatic ramp at the brand hue/chroma), the four **status coordinates** (`success`, `warning`, `danger`, `info` and their per-family hover/active/on solids) and the four **status shade scales** (`success-1…12`, `warning-1…12`, `danger-1…12`, `info-1…12`, one 12-step ramp per canonical hue).
 
 ### 2. Semantic Tokens (functional intent → global)
 
@@ -67,6 +67,46 @@ The brand accent is **normalized**: its lightness is shifted (perceptually, hue/
 
 With `--preserve-vibrancy`, the accent is instead **locked exactly** to the marketing spec: no lightness shift. Bright neon accents get an ultra-dark **chromatic gray** on-color (brand hue, restrained chroma, the lightest shade that still clears AAA) so the brand identity stays loud while text stays readable; dark accents keep white. The CLI reports the achieved `text-on-accent` ratio against every action state on stderr so you can verify the boundary. Mid-bright brands (where no on-color can clear AAA without shifting lightness) fall back to normalization with a stderr warning.
 
+### 3. Shade Scales (brand + status — Step 2)
+
+Following the article's [Step 2: Build your shade scales](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design#step-2-build-your-shade-scales), chroma now builds a full 12-step shade scale for **every** colored family — not just neutrals. Each scale shares the neutral lightness ladder (monotonic OKLCH interpolation) but uses a family-specific chroma profile peaking mid-scale (vivid at step 6–7, muted at the ends) and scaled back ~10% in dark mode (Step 6: reduced saturation on dark).
+
+- **Brand scale** `brand-1…12` — brand hue + brand chroma (floor 0.01 so near-gray brands still tint).
+- **Status scales** `success-1…12` / `warning-1…12` / `danger-1…12` / `info-1…12` — canonical hues/chromas independent of the brand.
+
+The article's 50–950 guide collapsed onto chroma's 1–12 Radix protocol (attributed below) now drives the preview ramps, the emitted `brand-*` / `{s}-*` CSS vars, and the Sass/Less/Stylus sections:
+
+| step | intent (chromatic & neutral) |
+| :--- | :--------------------------- |
+| `1` | Near-white, subtle background tints — app canvas / surface root |
+| `2` | Light backgrounds, panels / default surfaces |
+| `3` | Subtle tints, inputs / form fields |
+| `4` | Hover surfaces |
+| `5` | Selected / active surfaces, main brand tone (500) |
+| `6` | Low-contrast borders, dividers |
+| `7` | Component boundaries |
+| `8` | Disabled text, focus outlines |
+| `9` | Mid ramp · placeholder / muted mid |
+| `10` | Muted text, metadata / labels |
+| `11` | Secondary / body text — strong emphasis |
+| `12` | Primary / headings — near-black, high-contrast text · darkest surfaces |
+
+Source: adapted from Atmos *50 Near white … 950 Darkest* guide.
+
+### 4. Status Colors (success / warning / danger / info)
+
+The four semantic status families use **fixed canonical hues** — independent of the brand coordinate — so success is always a recognizable green, warning amber, danger red, and info blue, no matter the brand. Under **B1** (article Step 4: semantic → scale step), each family's tints are now **derived from its 12-step scale** and bound to 5 semantic tokens:
+
+| Status semantic token | Resolves to          | Functional intent                    |
+| :-------------------- | :------------------- | :----------------------------------- |
+| `bg-{s}-subtle`       | `{s}-2`              | Tinted alert/badge surfaces          |
+| `bg-{s}-strong`       | `{s}`                | Solid status fills (badges, buttons) |
+| `border-{s}`          | `{s}-6`              | Tinted status borders                |
+| `text-{s}`            | `{s}-11`             | Status text on default surfaces      |
+| `text-on-{s}`         | `{s}-on`             | Label/glyph on status surfaces       |
+
+The solid's lightness is normalized so its on-color clears **WCAG AA (≥4.5:1)** against the solid and both interaction states (success/danger/info keep white labels on vivid dark solids; warning keeps a black label on amber) — this solid stays **AAA-solved, not scale-indexed** (the one intentional exception: no scale step at `brand-9`/`{s}-9` can both be vivid and clear AA in light mode without overshooting). The `subtle`/`border`/`text` scale steps flip lightness per theme — pale tints in light mode, dark tints in dark mode — while `text-{s}` (`{s}-11`) is verified ≥4.5:1 against every surface in both themes; any future brand that would short the bar falls back to a solved value with a CLI warning (B1 safety hatch).
+
 ---
 
 ## Output
@@ -83,15 +123,15 @@ With `--preserve-vibrancy`, the accent is instead **locked exactly** to the mark
 | `-f tailwind-v3`                     | **Tailwind v3** `config.js` (+ companion `.css` when given `-o`); stdout carries the `config.js` only                                                          |
 | `-f tailwind` + any other name       | Treated as v3 config (`.js` + `.css` emitted)                                                                                                                  |
 
-The global ramps are emitted as **hex** (maximum browser compatibility); the semantic tokens chain through CSS custom properties (`--bg-surface-root: var(--step-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the four core semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names:
+The global ramps are emitted as **hex** (maximum browser compatibility); the semantic tokens chain through CSS custom properties (`--bg-surface-root: var(--step-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names. Each status family lands in the group that matches its role (`surface.success`, `foreground.success`, `border.success`, `on.success`):
 
-| Token group  | Utility example                                           |
-| :----------- | :-------------------------------------------------------- |
-| `surface`    | `bg-surface-root`                                         |
-| `foreground` | `text-foreground-primary` (never `text-text-primary`)     |
-| `border`     | `border-border-subtle` _(the one accepted double prefix)_ |
-| `action`     | `bg-action-primary`                                       |
-| `on`         | `text-on-accent`                                          |
+| Token group  | Utility example                                                 |
+| :----------- | :-------------------------------------------------------------- |
+| `surface`    | `bg-surface-root`, `bg-surface-success-subtle`, `bg-surface-success-strong` |
+| `foreground` | `text-foreground-primary` (never `text-text-primary`), `text-foreground-danger` |
+| `border`     | `border-border-subtle` _(the one accepted double prefix)_, `border-border-warning` |
+| `action`     | `bg-action-primary`                                             |
+| `on`         | `text-on-accent`, `text-on-info`                                |
 
 ### CSS custom properties (`--format css`)
 
@@ -176,10 +216,10 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
 
 ### Default output
 
-`python3 -m chroma 6366f1` emits the full self-contained Tailwind v4 stylesheet below:
+`python3 -m chroma 6366f1` emits the self-contained Tailwind v4 stylesheet below (status coordinates follow the same pattern as `--accent-*` in the global ramp and resolve through `--bg-{s}-subtle` / `--bg-{s}-strong` / `--text-{s}` / `--border-{s}` / `--text-on-{s}` in the semantic matrix):
 
 ```css
-/* Generated by chroma.py v1.0.0 — semantic theme tokens. */
+/* Generated by chroma.py v1.2.0 — semantic theme tokens. */
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
