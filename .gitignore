@@ -1,3 +1,5 @@
-.venv/
+REQUIREMENTS.md
+SPEC.md
+tasks/
 __pycache__/
-*.pyc
+.venv/

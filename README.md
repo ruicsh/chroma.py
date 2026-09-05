@@ -1,27 +1,14 @@
-# 🎨 chroma.py
+# Chroma — Deterministic Semantic Theme Generation
 
-> **Deterministic Semantic Theme Generation for Enterprise Frontends.**  
-> Weave a complete, dual-theme (Light/Dark) semantic token configuration from a single structural hue coordinate.
+A command-line tool that weaves a complete, dual-theme (Light/Dark) semantic token configuration from a single structural brand hue coordinate, compiled in OKLCH for enterprise frontends.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](https://opensource.org/licenses/MIT)
-[![Style: Systematic UI](https://img.shields.io/badge/Style-Systematic%20UI-blue.svg)](https://tailwindcss.com)
-[![Accessibility: WCAG AAA](https://img.shields.io/badge/Accessibility-WCAG%20AAA-blueviolet.svg)](https://www.w3.org/WAI/WCAG21/quickref/)
+Run it via `make run` (defaults to `6366f1`) or `make run 10b981`. Or directly with `python3 -m chroma 6366f1`. Or via the launcher: `./chroma.sh 6366f1`.
 
 ---
 
-## 🏛️ The Craftsmanship Narrative
+## The Brand Hue Coordinate Engine
 
-In color science, **chroma** represents the relative purity, intensity, and saturation of a specific visual coordinate.
-
-`chroma.py` applies this exact principle to frontend architecture. Instead of manually guessing numeric hex variants or introducing visual inconsistencies, `chroma.py` treats your single brand accent color as a spatial coordinate. It converts that coordinate into **OKLCH** — the perceptually uniform cylindrical color space (per [Björn Ottosson](https://bottosson.github.io/posts/oklab/), standardized in [CSS Color 4](https://www.w3.org/TR/css-color-4/)) — and mathematically compiles a complete, comprehensive matrix of semantic design tokens for **both Light and Dark themes** instantly.
-
-Every generated background, text color, and border layer is programmatically calibrated to maintain **strict WCAG AAA contrast ratios (≥7:1)** while utilizing **Chromatic Grays** — injecting a micro-dose of your brand's chroma directly into the neutral background layers to anchor the entire layout canvas.
-
----
-
-## 📐 The Brand Hue Coordinate Engine
-
-`chroma.py` does not treat colors as static aesthetic choices. It treats your primary input hex as a spatial metric inside a cylindrical color coordinate system.
+In color science, **chroma** represents the relative purity, intensity, and saturation of a specific visual coordinate. `chroma` applies this principle to frontend architecture: instead of manually guessing numeric hex variants or introducing visual inconsistencies, it treats your single brand accent color as a spatial metric inside a cylindrical coordinate system, converts it into **OKLCH** (the perceptually uniform space standardized in [CSS Color 4](https://www.w3.org/TR/css-color-4/)), and mathematically compiles a complete matrix of semantic design tokens for **both Light and Dark themes** instantly.
 
 ```
                   ┌─── [Brand Hue Coordinate] ───┐
@@ -40,9 +27,9 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 
 ---
 
-## 🧭 The Structural Token Architecture
+## The Structural Token Architecture
 
-`chroma.py` rejects arbitrary design names. Its token scale is bound to **functional intent** by following the [Radix UI 12-step protocol](https://www.radix-ui.com/colors) — backgrounds, interactive components, borders, solids, and text each occupy a fixed band of the scale — while outputting production-grade **Semantic Hierarchy** names designed to support hyper-dense workspaces, data grids, and high-frequency real-time viewports.
+`chroma` rejects arbitrary design names. Its token scale is bound to **functional intent** by following the [Radix UI 12-step protocol](https://www.radix-ui.com/colors) — backgrounds, interactive components, borders, solids, and text each occupy a fixed band of the scale — while outputting production-grade **Semantic Hierarchy** names designed to support hyper-dense workspaces, data grids, and high-frequency real-time viewports.
 
 ### Radix 12-Step → Semantic Alias Mapping
 
@@ -67,24 +54,26 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 
 ---
 
-## 🛠️ Installation & Quickstart
-
-Clone the file directly into your local workspace setup or automation pipeline:
+## Usage
 
 ```bash
-# Clone or download the single-file utility (stdlib only — no dependencies)
-curl -O https://raw.githubusercontent.com/yourusername/chroma/main/chroma.py
-
-# Make the compiler executable
-chmod +x chroma.py
-
-# Generate a Tailwind v3 config + companion theme CSS for an institutional Violet accent
-./chroma.py 6366f1 -o tailwind.config.js
+make run              # python3 -m chroma 6366f1 (default brand)
+make run 10b981       # python3 -m chroma 10b981
 ```
 
----
+Or directly:
 
-## 💻 CLI Usage & API Reference
+```bash
+python3 -m chroma 6366f1 -o tailwind.config.js
+```
+
+Or via the launcher (uses the project venv):
+
+```bash
+./chroma.sh 6366f1 --format json
+```
+
+### CLI reference
 
 ```bash
 usage: chroma.py [-h] [-o OUTPUT] [-f {json,tailwind}] hex
@@ -114,21 +103,23 @@ options:
 | `tailwind.config.js` | **Tailwind v3** `config.js` (`darkMode: 'class'`, colors → `var(--token)`) **plus** a companion `tailwind.config.css` defining the `:root` / `.dark` variables |
 | any other name       | Treated as v3 config (`.js` + `.css` emitted) |
 
+The `tailwind` format uses **hex** values for maximum browser compatibility.
+
 ### Comprehensive Integration Example
 
 To output a pure, raw programmatic JSON matrix — with both hex and OKLCH views plus brand metadata — to feed straight into an advanced charting library or web-component configuration pipeline:
 
 ```bash
-./chroma.py 10b981 --format json --output branding-tokens.json
+python3 -m chroma 10b981 --format json --output branding-tokens.json
 ```
 
-The `tailwind` format uses **hex** values for maximum browser compatibility; the `json` format also exposes a parallel `oklch` view (`L C H`) for consumers who want the perceptual space directly.
+The `json` document has the shape `{ "meta": …, "light": {token: hex}, "dark": {token: hex}, "oklch": {theme: {token: "L C H"}} }`.
 
 ---
 
-## 🎨 Under the Hood: The Interpolation Curves
+## Under the Hood: The Interpolation Curves
 
-`chroma.py` does not use hardcoded or randomly-sampled arrays. It processes your input color using deterministic spatial calculations:
+`chroma` does not use hardcoded or randomly-sampled arrays. It processes your input color using deterministic spatial calculations:
 
 1. **Hue Locking:** Isolates the brand hue to ensure all calculated gray tokens contain identical light reflection frequencies.
 2. **Chroma Restraint:** Bounds neutral-surface chroma (dark ≤ `0.026`, light ≤ `0.012`) so interface elements never look muddy, cheap, or oversaturated.
@@ -136,21 +127,39 @@ The `tailwind` format uses **hex** values for maximum browser compatibility; the
 
 ---
 
-## ✅ Guarantees & Verification
+## Guarantees & Verification
 
-The system is shipped with a pytest suite that enforces its own contract:
+The system ships a test suite that enforces its own contract:
 
 - Hex parsing (`#RRGGBB` / `RRGGBB` / `#RGB` / `RGB`) and OKLCH round-trip fidelity.
 - Monotonic 12-step lightness, surface lightness bands, and neutral chroma caps.
 - **WCAG AAA:** `text-primary` vs every `surface-*` ≥ 7:1, `intent-on-primary` vs every `intent-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
 
+The full quality gate — lint (`ruff`), formatting (`ruff format`), type checking (`pyright`) and tests (`unittest`) — runs via:
+
 ```bash
-python3 -m pytest -q
+make check
 ```
 
 ---
 
-## 📄 License
+## Testing
 
-Distributed under the MIT License. See `LICENSE` for more information.
+```bash
+make test
+```
+
+Or directly:
+
+```bash
+python3 -m unittest discover -v -s chroma/tests
+```
+
+All tests pass (36 test cases and counting).
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

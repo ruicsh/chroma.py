@@ -1,0 +1,16 @@
+[project]
+name = "chroma"
+version = "1.0.0"
+description = "Deterministic Semantic Theme Generation for Enterprise Frontends"
+requires-python = ">=3.10"
+authors = [
+    { name = "Rui Costa" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+dependencies = []
+
+[tool.pyright]
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+reportUnusedVariable = "error"

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install tools
+        run: uv pip install ruff==0.15.16 pyright==1.1.410
+
+      - name: Lint
+        run: uv run ruff check chroma/
+
+      - name: Check formatting
+        run: uv run ruff format --check chroma/
+
+      - name: Type check
+        run: uv run pyright chroma/
+
+      - name: Test
+        run: uv run python -m unittest discover -v -s chroma/tests
