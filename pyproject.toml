@@ -1,6 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "chroma"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Deterministic Semantic Theme Generation for Enterprise Frontends"
 requires-python = ">=3.10"
 authors = [
@@ -9,6 +13,18 @@ authors = [
 license = { text = "MIT" }
 readme = "README.md"
 dependencies = []
+
+[project.scripts]
+chroma = "chroma.cli:main"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.16",
+    "pyright==1.1.410",
+]
+
+[tool.hatch.version]
+path = "chroma/__init__.py"
 
 [tool.pyright]
 typeCheckingMode = "standard"
