@@ -19,9 +19,16 @@ class TestCLI(unittest.TestCase):
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["meta"]["input"], "6366f1")
         self.assertEqual(set(payload["meta"]["themes"]), {"light", "dark"})
-        for theme in ("light", "dark"):
-            self.assertIn("surface-root", payload[theme])
-            self.assertIn("intent-primary", payload[theme])
+        self.assertEqual(
+            set(payload["meta"]["layers"]), {"global", "semantic", "component"}
+        )
+        for layer in ("global", "semantic", "component"):
+            self.assertIn("light", payload[layer])
+            self.assertIn("dark", payload[layer])
+        self.assertIn("oklch", payload)
+        self.assertIn("bg-surface-root", payload["semantic"]["light"])
+        self.assertIn("bg-grid-header", payload["component"]["light"])
+        self.assertIn("step-12", payload["global"]["light"])
 
     def test_json_to_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -31,7 +38,9 @@ class TestCLI(unittest.TestCase):
                 code = main(["10b981", "-f", "json", "-o", str(target)])
             self.assertEqual(code, 0)
             payload = json.loads(target.read_text())
-            self.assertEqual(payload["light"]["intent-primary"], "#10b981")
+            self.assertEqual(
+                payload["semantic"]["light"]["bg-action-primary"], "#10b981"
+            )
             self.assertIn("wrote", err.getvalue())
 
     def test_tailwind_default_is_v4_css(self):
@@ -44,6 +53,10 @@ class TestCLI(unittest.TestCase):
         self.assertIn("@theme inline", text)
         self.assertIn("@custom-variant dark", text)
         self.assertIn(".dark {", text)
+        self.assertIn("--color-surface-root: var(--bg-surface-root);", text)
+        self.assertIn("--color-foreground-primary: var(--text-primary);", text)
+        self.assertIn("--bg-surface-root: var(--step-1);", text)
+        self.assertIn("--bg-grid-header: var(--bg-surface-subtle);", text)
 
     def test_tailwind_v4_css_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -52,9 +65,9 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(code, 0)
             css = target.read_text()
             self.assertIn("@theme inline", css)
-            self.assertIn("--color-surface-root: var(--surface-root);", css)
             self.assertIn(":root {", css)
             self.assertIn(".dark {", css)
+            self.assertIn("--bg-surface-overlay: #ffffff;", css)
 
     def test_tailwind_v3_config_and_companion(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -67,11 +80,14 @@ class TestCLI(unittest.TestCase):
             css = companion.read_text()
             self.assertIn("module.exports", config)
             self.assertIn("darkMode: 'class'", config)
-            self.assertIn("surface: { root: 'var(--surface-root)'", config)
-            self.assertIn("intent: { primary: 'var(--intent-primary)'", config)
+            self.assertIn("surface: { root: 'var(--bg-surface-root)'", config)
+            self.assertIn("foreground: { primary: 'var(--text-primary)'", config)
+            self.assertIn("action: { primary: 'var(--bg-action-primary)'", config)
+            self.assertIn("grid: { header: 'var(--bg-grid-header)'", config)
             self.assertIn(":root {", css)
             self.assertIn(".dark {", css)
-            self.assertIn("--intent-primary: #d7e8ff;", css)
+            self.assertIn("--accent: #d7e8ff;", css)
+            self.assertIn("--bg-surface-root: var(--step-1);", css)
 
     def test_tailwind_unknown_extension_becomes_v3(self):
         with tempfile.TemporaryDirectory() as tmp:

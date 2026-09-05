@@ -1,7 +1,9 @@
 """chroma.py — deterministic semantic theme generation for enterprise frontends.
 
 Weave a complete, dual-theme (Light/Dark) semantic token configuration from a
-single structural brand hue coordinate, compiled in OKLCH.
+single structural brand hue coordinate, compiled in OKLCH across three Atmos
+tiers: global (raw math), semantic (functional intent) and component (explicit
+UI placements).
 """
 
 __version__ = "1.0.0"
@@ -24,26 +26,32 @@ from chroma.serializers import (
     serialize_tailwind_v4_css,
 )
 from chroma.tokens import (
+    ACCENT_TOKEN_NAMES,
+    COMPONENT_TO_SEMANTIC,
     DARK,
     LIGHT,
-    NEUTRAL_TOKEN_STEPS,
+    SEMANTIC_TO_GLOBAL,
+    STEP_KEYS,
     THEMES,
-    build_themes,
-    intent_scale,
-    neutral_scale,
+    accent_scale,
+    build_layers,
+    neutral_steps,
     verify_contrast,
 )
 
 __all__ = [
+    "ACCENT_TOKEN_NAMES",
+    "COMPONENT_TO_SEMANTIC",
     "DARK",
     "LIGHT",
-    "NEUTRAL_TOKEN_STEPS",
+    "SEMANTIC_TO_GLOBAL",
+    "STEP_KEYS",
     "THEMES",
-    "build_themes",
+    "accent_scale",
+    "build_layers",
     "contrast_ratio",
     "hsl_to_rgb",
-    "intent_scale",
-    "neutral_scale",
+    "neutral_steps",
     "oklch_to_hex",
     "oklch_to_rgb",
     "parse_hex",

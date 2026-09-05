@@ -27,30 +27,62 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 
 ---
 
-## The Structural Token Architecture
+## The Structural Token Architecture: Atmos Three-Tier Taxonomy
 
-`chroma` rejects arbitrary design names. Its token scale is bound to **functional intent** by following the [Radix UI 12-step protocol](https://www.radix-ui.com/colors) — backgrounds, interactive components, borders, solids, and text each occupy a fixed band of the scale — while outputting production-grade **Semantic Hierarchy** names designed to support hyper-dense workspaces, data grids, and high-frequency real-time viewports.
+`chroma` rejects arbitrary design names. It compiles tokens across **three abstraction tiers** — the industry-standard [Atmos UI](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design) taxonomy — so application code stays decoupled from branding changes. The raw math follows the [Radix UI 12-step protocol](https://www.radix-ui.com/colors): each step is evaluated from an explicit, monotonic interpolation curve in OKLCH, then bound to functional intent (semantic), then pinned to explicit UI placements (component).
 
-### Radix 12-Step → Semantic Alias Mapping
+```
+[ 1. GLOBAL TOKENS ]  ───►  [ 2. SEMANTIC TOKENS ]  ───►  [ 3. COMPONENT TOKENS ]
+   Raw Palette Options          Functional Meaning             Explicit UI Placements
+   (e.g. step-3, accent)        (e.g. bg-surface-default)      (e.g. bg-grid-row-hover)
+```
 
-| Radix step band | Functional intent | Semantic token |
-| :-------------- | :---------------- | :-------------- |
-| 1               | App background    | `surface-root`  |
-| 2               | Subtle background | `surface-subtle` |
-| 3               | UI element bg (normal) | `surface-default` |
-| 4               | UI element bg (hover)  | `surface-elevated` |
-| 5               | UI element bg (active) | `surface-active` |
-| 6               | Subtle border     | `border-subtle` |
-| 7               | UI element border/focus | `border-default` |
-| 8               | Solid / strong surface | `border-strong` |
-| 10–12           | Low/high/highest contrast text | `text-muted` / `text-secondary` / `text-primary` |
+### 1. Global Tokens (the raw math)
 
-### Brand Accent (Intent)
+The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue) plus the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`, `accent-focus`). Component templates never consume these directly.
 
-- `intent-primary` — the brand hue, **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until the on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white.
-- `intent-primary-hover` / `intent-primary-active` — vary **chroma** (perceived vibrancy) at the same lightness, so the AAA guarantee holds across interaction states.
-- `intent-on-primary` — the auto-picked black/white label.
-- `intent-focus-ring` — a visible focus indicator at the locked hue.
+### 2. Semantic Tokens (functional intent → global)
+
+| Atmos semantic token | Resolves to      | Functional intent                                   |
+| :------------------- | :--------------- | :-------------------------------------------------- |
+| `bg-surface-root`    | `step-1`         | App canvas background / window                      |
+| `bg-surface-default` | `step-2`         | Primary layout panels and content cards             |
+| `bg-surface-subtle`  | `step-3`         | Form inputs, table cells, inactive text areas       |
+| `bg-surface-hover`   | `step-4`         | High-velocity grid row hover states                 |
+| `bg-surface-active`  | `step-5`         | Selected items, active navigation tabs              |
+| `bg-surface-overlay` | *(dedicated)*    | Floating layers: popovers, dropdowns, modals        |
+| `border-subtle`      | `step-6`         | Low-contrast grid-line cell dividers                |
+| `border-default`     | `step-7`         | Structural component boundary lines                 |
+| `border-strong`      | `step-8`         | Focus states and active input outline rings         |
+| `text-disabled`      | `step-8`         | Recessed inactive parameters (matches input borders)|
+| `text-muted`         | `step-10`        | Metadata, labels, table headers                     |
+| `text-secondary`     | `step-11`        | Standard body text and descriptive data             |
+| `text-primary`       | `step-12`        | Critical numeric data cells and main titles         |
+| `text-on-accent`     | `accent-on`      | Label/glyph color rendered on accent surfaces       |
+| `bg-action-primary`  | `accent`         | Primary brand buttons and execution triggers        |
+| `bg-action-hover`    | `accent-hover`   | Hover states for primary interaction buttons        |
+| `bg-action-active`   | `accent-active`  | Pressed state for primary interaction buttons       |
+
+The brand accent is **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until its on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white. Hover/active vary **chroma** at the same lightness, so the AAA guarantee holds across interaction states. Actions reference the **brand accent**, not a neutral gray — neutral buttons blend into layout containers, while the brand coordinate acts as an unmistakable execution beacon.
+
+### 3. Component Tokens (explicit UI placements → semantic)
+
+| Component token           | Resolves to        |
+| :------------------------ | :----------------- |
+| `bg-grid-header`          | `bg-surface-subtle` |
+| `bg-grid-row-hover`       | `bg-surface-hover`  |
+| `bg-grid-row-selected`    | `bg-surface-active` |
+| `border-grid-cell`        | `border-subtle`     |
+| `text-grid-value`         | `text-primary`      |
+| `bg-input-field`          | `bg-surface-subtle` |
+| `border-input-default`    | `border-default`    |
+| `border-input-focus`      | `border-strong`     |
+| `text-input-placeholder`  | `text-disabled`     |
+| `bg-btn-primary-default`  | `bg-action-primary` |
+| `bg-btn-primary-hover`    | `bg-action-hover`   |
+| `text-btn-primary-glyph`  | `text-on-accent`    |
+
+Changing a single component token never affects the rest of the ecosystem; changing the raw global math re-themes the entire stack.
 
 ---
 
@@ -76,7 +108,7 @@ Or via the launcher (uses the project venv):
 ### CLI reference
 
 ```bash
-usage: chroma.py [-h] [-o OUTPUT] [-f {json,tailwind}] hex
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind}] hex
 
 Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
 from one brand color hex.
@@ -96,24 +128,35 @@ options:
 
 `-f tailwind` adapts to your Tailwind major version through the `-o` target:
 
-| Output target        | Result |
-| :------------------- | :------ |
-| *(stdout / no `-o`)* | Self-contained **Tailwind v4** stylesheet (`@theme inline` + `@custom-variant dark` + `:root`/`.dark` tokens) |
-| `theme.css`          | Self-contained **Tailwind v4** stylesheet |
+| Output target        | Result                                                                                                                                                         |
+| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| _(stdout / no `-o`)_ | Self-contained **Tailwind v4** stylesheet (`@theme inline` + `@custom-variant dark` + `:root`/`.dark` tokens)                                                  |
+| `theme.css`          | Self-contained **Tailwind v4** stylesheet                                                                                                                      |
 | `tailwind.config.js` | **Tailwind v3** `config.js` (`darkMode: 'class'`, colors → `var(--token)`) **plus** a companion `tailwind.config.css` defining the `:root` / `.dark` variables |
-| any other name       | Treated as v3 config (`.js` + `.css` emitted) |
+| any other name       | Treated as v3 config (`.js` + `.css` emitted)                                                                                                                  |
 
-The `tailwind` format uses **hex** values for maximum browser compatibility.
+The `tailwind` format uses **hex** values for maximum browser compatibility. The three tiers are chained through CSS custom properties (`--bg-grid-header: var(--bg-surface-subtle)` → `--bg-surface-subtle: var(--step-3)`), so the raw global values remain the single source of truth. The Tailwind `colors` object exposes **semantic + component** tokens only (global is never consumed directly by components), using utility-friendly names:
+
+| Token group | Utility example                |
+| :---------- | :----------------------------- |
+| `surface`   | `bg-surface-root`              |
+| `foreground`| `text-foreground-primary` (never `text-text-primary`) |
+| `border`    | `border-border-subtle` *(the one accepted double prefix)* |
+| `action`    | `bg-action-primary`            |
+| `on`        | `text-on-accent`               |
+| `grid`      | `bg-grid-header` / `border-grid-cell` / `text-grid-value` |
+| `input`     | `bg-input-field` / `border-input-focus` / `text-input-placeholder` |
+| `btn`       | `bg-btn-primary-default` / `text-btn-primary-glyph` |
 
 ### Comprehensive Integration Example
 
-To output a pure, raw programmatic JSON matrix — with both hex and OKLCH views plus brand metadata — to feed straight into an advanced charting library or web-component configuration pipeline:
+To output a pure, raw programmatic JSON matrix — with all three tiers in hex and OKLCH plus brand metadata — to feed straight into an advanced charting library or web-component configuration pipeline:
 
 ```bash
 python3 -m chroma 10b981 --format json --output branding-tokens.json
 ```
 
-The `json` document has the shape `{ "meta": …, "light": {token: hex}, "dark": {token: hex}, "oklch": {theme: {token: "L C H"}} }`.
+The `json` document has the shape `{ "meta": …, "global": {theme: {token: hex}}, "semantic": …, "component": …, "oklch": {layer: {theme: {token: "L C H"}}} }`.
 
 ---
 
@@ -133,7 +176,8 @@ The system ships a test suite that enforces its own contract:
 
 - Hex parsing (`#RRGGBB` / `RRGGBB` / `#RGB` / `RGB`) and OKLCH round-trip fidelity.
 - Monotonic 12-step lightness, surface lightness bands, and neutral chroma caps.
-- **WCAG AAA:** `text-primary` vs every `surface-*` ≥ 7:1, `intent-on-primary` vs every `intent-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
+- **Taxonomy integrity:** every semantic token resolves to its exact global source and every component token to its exact semantic source.
+- **WCAG AAA:** `text-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
 
 The full quality gate — lint (`ruff`), formatting (`ruff format`), type checking (`pyright`) and tests (`unittest`) — runs via:
@@ -156,7 +200,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (36 test cases and counting).
+All tests pass (43 test cases and counting).
 
 ---
 

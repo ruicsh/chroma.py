@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from chroma.serializers import emit_tailwind, serialize_json
-from chroma.tokens import build_themes
+from chroma.tokens import build_layers
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,20 +32,20 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        themes = build_themes(args.hex)
+        layers = build_layers(args.hex)
     except ValueError as exc:
         print(f"chroma: error: {exc}", file=sys.stderr)
         return 2
 
     if args.format == "json":
-        payload = serialize_json(themes, args.hex)
+        payload = serialize_json(layers, args.hex)
         if args.output:
             Path(args.output).write_text(payload)
             print(f"wrote {args.output}", file=sys.stderr)
         else:
             sys.stdout.write(payload)
     else:
-        emit_tailwind(themes, args.output)
+        emit_tailwind(layers, args.output)
     return 0
 
 
