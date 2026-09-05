@@ -350,6 +350,21 @@ def serialize_tailwind_v4_css(
     return "\n".join(lines)
 
 
+def _emit_v3_files(
+    layers: dict[str, dict[str, dict[str, str]]],
+    output: str,
+    preserve_vibrancy: bool = False,
+) -> None:
+    """Write the Tailwind v3 ``config.js`` and its companion ``.css`` sheet."""
+    path = Path(output)
+    config = path if path.suffix == ".js" else path.with_suffix(".js")
+    companion = config.with_suffix(".css")
+    config.write_text(serialize_tailwind_v3_config())
+    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy))
+    print(f"wrote {config}", file=sys.stderr)
+    print(f"wrote {companion}", file=sys.stderr)
+
+
 def emit_tailwind(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
@@ -369,12 +384,7 @@ def emit_tailwind(
         path.write_text(serialize_tailwind_v4_css(layers, preserve_vibrancy))
         print(f"wrote {path}", file=sys.stderr)
         return
-    config = path if path.suffix == ".js" else path.with_suffix(".js")
-    companion = config.with_suffix(".css")
-    config.write_text(serialize_tailwind_v3_config())
-    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy))
-    print(f"wrote {config}", file=sys.stderr)
-    print(f"wrote {companion}", file=sys.stderr)
+    _emit_v3_files(layers, output, preserve_vibrancy)
 
 
 def emit_tailwind_v3(
@@ -396,13 +406,7 @@ def emit_tailwind_v3(
             file=sys.stderr,
         )
         return
-    path = Path(output)
-    config = path if path.suffix == ".js" else path.with_suffix(".js")
-    companion = config.with_suffix(".css")
-    config.write_text(serialize_tailwind_v3_config())
-    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy))
-    print(f"wrote {config}", file=sys.stderr)
-    print(f"wrote {companion}", file=sys.stderr)
+    _emit_v3_files(layers, output, preserve_vibrancy)
 
 
 # ---------------------------------------------------------------------------
@@ -567,22 +571,6 @@ _SEMANTIC_COMMENT = "Semantic Structural Mapping Matrix"
 
 # Root name of the emitted theme map in each preprocessor's native syntax.
 _MAP_ROOT = "chroma-theme"
-
-
-def _theme_map(
-    layers: dict[str, dict[str, dict[str, str]]],
-) -> dict[str, dict[str, str]]:
-    """Flatten the two tiers per theme: global ramps + accent, then semantic.
-
-    Semantic tokens already carry resolved hex (``layers[theme]["semantic"]``
-    is copied from the global source in :func:`build_layers`), so the map holds
-    concrete values — preprocessor variables are compile-time and cannot chain
-    through CSS ``var()``.
-    """
-    return {
-        theme_name: {**layers[theme_name]["global"], **layers[theme_name]["semantic"]}
-        for theme_name in _THEME_ORDER
-    }
 
 
 def _token_sections(

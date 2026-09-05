@@ -82,7 +82,7 @@ def parse_hex(hex_value: str) -> tuple[float, float, float]:
         raise ValueError(f"invalid hex color: {hex_value!r}")
     try:
         channels = [int(value[i : i + 2], 16) for i in (0, 2, 4)]
-    except ValueError as exc:  # pragma: no cover - int() failure path
+    except ValueError as exc:
         raise ValueError(f"invalid hex color: {hex_value!r}") from exc
     return (channels[0] / 255.0, channels[1] / 255.0, channels[2] / 255.0)
 
