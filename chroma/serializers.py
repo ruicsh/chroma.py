@@ -492,7 +492,6 @@ def serialize_dtcg(
 # Per-mode file naming: a ``theme.json`` target becomes ``theme.light.json``
 # and ``theme.dark.json``. Figma's native import creates one mode per dropped
 # file, so the theme name carried by the file name maps directly to a mode.
-_MODE_THEME_ORDER: tuple[str, ...] = ("light", "dark")
 
 
 def serialize_figma_mode(
@@ -518,8 +517,8 @@ def serialize_figma(
     return serialize_figma_mode(layers, "light", preserve_vibrancy)
 
 
-def _figma_targets(output: str) -> tuple[Path, Path]:
-    """Derive the per-mode file paths from an ``-o`` target.
+def _figma_target(output: str, theme_name: str) -> Path:
+    """Derive the per-mode file path for a theme from an ``-o`` target.
 
     A ``theme.json`` (or extension-less ``theme``) target produces
     ``theme.light.json`` and ``theme.dark.json``.
@@ -527,7 +526,7 @@ def _figma_targets(output: str) -> tuple[Path, Path]:
     stem = Path(output)
     if stem.suffix == ".json":
         stem = stem.with_suffix("")
-    return Path(f"{stem}.light.json"), Path(f"{stem}.dark.json")
+    return stem.with_name(f"{stem.name}.{theme_name}.json")
 
 
 def emit_figma(
@@ -545,12 +544,13 @@ def emit_figma(
     if output is None:
         sys.stdout.write(serialize_figma(layers, preserve_vibrancy))
         print(
-            "dark mode not shown on stdout; pass -o <path> to write both "
-            "theme.light.json and theme.dark.json for the Figma Variables panel",
+            "dark mode not shown on stdout; pass -o <stem>.json to write "
+            "<stem>.light.json and <stem>.dark.json for the Figma Variables panel",
             file=sys.stderr,
         )
         return
-    for path, theme_name in zip(_figma_targets(output), _MODE_THEME_ORDER):
+    for theme_name in _THEME_ORDER:
+        path = _figma_target(output, theme_name)
         path.write_text(serialize_figma_mode(layers, theme_name, preserve_vibrancy))
         print(f"wrote {path}", file=sys.stderr)
 

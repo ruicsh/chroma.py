@@ -230,6 +230,9 @@ class TestFigmaFormat(unittest.TestCase):
             with self.subTest(theme=theme_name):
                 payload = json.loads(serialize_figma_mode(layers, theme_name))
                 self.assertEqual(
+                    _count_token_leaves(payload), len(layers[theme_name]["semantic"])
+                )
+                self.assertEqual(
                     payload["bg"]["surface"]["root"]["$value"],
                     layers[theme_name]["semantic"]["bg-surface-root"],
                 )
