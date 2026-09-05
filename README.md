@@ -29,17 +29,17 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 
 ## The Structural Token Architecture: Atmos Token Taxonomy
 
-`chroma` rejects arbitrary design names. It compiles tokens across the **Atmos UI** [taxonomy tiers](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design) so application code stays decoupled from branding changes. The raw math follows the [Radix UI 12-step protocol](https://www.radix-ui.com/colors): each step is evaluated from an explicit, monotonic interpolation curve in OKLCH, then bound to functional intent (semantic). **Layer 3 (component) tokens are not generated** — they belong in the code layer, mapped onto semantic tokens inside your component/style objects (see [Component tokens (code layer)](#component-tokens-code-layer)).
+`chroma` rejects arbitrary design names. It compiles tokens across the **Atmos UI** [taxonomy tiers](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design) so application code stays decoupled from branding changes. The raw math follows the [Radix UI 12-step protocol](https://www.radix-ui.com/colors): each step is evaluated from an explicit, monotonic interpolation curve in OKLCH, then bound to functional intent (semantic).
 
 ```
-[ 1. GLOBAL TOKENS ]  ───►  [ 2. SEMANTIC TOKENS ]  ───►  [ code layer ]
-   Raw Palette Options          Functional Meaning            Component aliases
-   (e.g. step-3, accent)        (e.g. bg-surface-default)     (e.g. bg-grid-row-hover)
+[ 1. GLOBAL TOKENS ]  ───►  [ 2. SEMANTIC TOKENS ]
+   Raw Palette Options          Functional Meaning
+   (e.g. step-3, accent)        (e.g. bg-surface-default)
 ```
 
 ### 1. Global Tokens (the raw math)
 
-The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue) plus the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`). Component templates never consume these directly.
+The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue) plus the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`).
 
 ### 2. Semantic Tokens (functional intent → global)
 
@@ -66,39 +66,6 @@ The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chr
 The brand accent is **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until its on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white. Hover/active vary **chroma** at the same lightness, so the AAA guarantee holds across interaction states. Actions reference the **brand accent**, not a neutral gray — neutral buttons blend into layout containers, while the brand coordinate acts as an unmistakable execution beacon.
 
 With `--preserve-vibrancy`, the accent is instead **locked exactly** to the marketing spec: no lightness shift. Bright neon accents get an ultra-dark **chromatic gray** on-color (brand hue, restrained chroma, the lightest shade that still clears AAA) so the brand identity stays loud while text stays readable; dark accents keep white. The CLI reports the achieved `text-on-accent` ratio against every action state on stderr so you can verify the boundary. Mid-bright brands (where no on-color can clear AAA without shifting lightness) fall back to normalization with a stderr warning.
-
-### Component tokens (code layer)
-
-Component aliases are **not generated** by `chroma` — the CSS ships only the global ramps and semantic intent, so your theme file stays small and focused. Instead, apply component mappings directly in your layout code, deriving them from semantic utilities:
-
-| Component token          | Derived from               |
-| :----------------------- | :------------------------- |
-| `bg-grid-header`         | `bg-surface-subtle`        |
-| `bg-grid-row-hover`      | `bg-surface-hover`         |
-| `bg-grid-row-selected`   | `bg-surface-active`        |
-| `border-grid-cell`       | `border-border-subtle`     |
-| `text-grid-value`        | `text-foreground-primary`  |
-| `bg-input-field`         | `bg-surface-subtle`        |
-| `border-input-default`   | `border-border-default`    |
-| `border-input-focus`     | `border-border-strong`     |
-| `text-input-placeholder` | `text-foreground-disabled` |
-| `bg-btn-primary-default` | `bg-action-primary`        |
-| `bg-btn-primary-hover`   | `bg-action-hover`          |
-| `text-btn-primary-glyph` | `text-on-accent`           |
-
-In React, that is a local style map or utility alias:
-
-```ts
-const grid = {
-  header: "bg-surface-subtle",
-  rowHover: "bg-surface-hover",
-  rowSelected: "bg-surface-active",
-  cell: "border-border-subtle",
-  value: "text-foreground-primary",
-};
-```
-
-Keeping these aliases in the code layer means a single component's styling can evolve without touching — or breaking — the global theme.
 
 ---
 
@@ -149,7 +116,7 @@ A [W3C Design Tokens Community Group](https://tr.designtokens.org/format/) JSON 
 python3 -m chroma 6366f1 --format dtcg -o chroma-theme.dtcg.json
 ```
 
-All three targets emit only the **Layer 2 semantic tokens** (plus, for `css`, the Layer 1 global ramps its `var()` chain depends on) — never Layer 3 component aliases.
+All three targets emit only the **semantic tokens** (plus, for `css`, the global ramps its `var()` chain depends on).
 
 ### Sample outputs
 
@@ -286,7 +253,7 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
 }
 ```
 
-Global hex values live in one place; everything else is an alias — and there is nothing grid-, input-, or button-specific in the file.
+Global hex values live in one place; everything else is an alias.
 
 Every token carries an inline **usage hint**: semantic and accent variables document where they should be used (`--bg-surface-root: var(--step-1);  /* app canvas background */`), and each `@theme` color shows the utility class it generates (`--color-surface-root: var(--bg-surface-root);  /* bg-surface-root */`).
 
@@ -319,7 +286,6 @@ The system ships a test suite that enforces its own contract:
 - Hex parsing (`#RRGGBB` / `RRGGBB` / `#RGB` / `RGB`) and OKLCH round-trip fidelity.
 - Monotonic 12-step lightness, surface lightness bands, and neutral chroma caps.
 - **Taxonomy integrity:** every semantic token resolves to its exact global source.
-- **No component tokens in output:** the CSS/JSON emit only global + semantic; component aliases are documented for the code layer.
 - **WCAG AAA:** `text-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
 - **Multi-format output:** `css` (vanilla), `ts` (as-const module) and `dtcg` (W3C) targets are covered by the suite, with committed samples kept byte-identical via a sync test.
@@ -394,7 +360,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (61 test cases and counting).
+All tests pass (58 test cases and counting).
 
 ---
 

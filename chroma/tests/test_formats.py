@@ -20,17 +20,6 @@ from chroma.serializers import (
 
 BRAND = "6366f1"
 
-COMPONENT_MARKERS = (
-    "--bg-grid-",
-    "--border-grid-",
-    "--text-grid-",
-    "--bg-input-",
-    "--border-input-",
-    "--text-input-",
-    "--bg-btn-",
-    "--text-btn-",
-)
-
 
 def camel(token: str) -> str:
     """Mirror the serializer's kebab -> camelCase mapping for assertions."""
@@ -79,14 +68,6 @@ class TestCssFormat(unittest.TestCase):
             self.assertIn(".dark {", text)
             self.assertIn("wrote", err.getvalue())
 
-    def test_css_has_no_component_tokens(self):
-        out = io.StringIO()
-        with redirect_stdout(out):
-            main([BRAND, "-f", "css"])
-        for marker in COMPONENT_MARKERS:
-            with self.subTest(marker=marker):
-                self.assertNotIn(marker, out.getvalue())
-
 
 class TestTsFormat(unittest.TestCase):
     def test_ts_to_file_persists(self):
@@ -125,13 +106,12 @@ class TestTsFormat(unittest.TestCase):
         assert step is not None
         self.assertEqual(step.group(1), expected)
 
-    def test_ts_keys_are_semantic_layer_only(self):
+    def test_ts_keys_are_semantic_only(self):
         out = io.StringIO()
         with redirect_stdout(out):
             main([BRAND, "-f", "ts"])
         keys = set(re.findall(r"^    ([a-zA-Z][a-zA-Z0-9]*): ", out.getvalue(), re.M))
         self.assertEqual(keys, _semantic_camel_keys())
-        self.assertNotIn("bgGridHeader", keys)
 
 
 class TestDtcgFormat(unittest.TestCase):
@@ -164,7 +144,7 @@ class TestDtcgFormat(unittest.TestCase):
         payload = json.loads(out.getvalue())
         self.assertIn("bg", payload["dark"])
 
-    def test_dtcg_no_component_tokens(self):
+    def test_dtcg_tree_has_exact_semantic_domains(self):
         out = io.StringIO()
         with redirect_stdout(out):
             main([BRAND, "-f", "dtcg"])

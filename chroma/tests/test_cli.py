@@ -9,17 +9,6 @@ from pathlib import Path
 
 from chroma.cli import main
 
-COMPONENT_MARKERS = (
-    "--bg-grid-",
-    "--border-grid-",
-    "--text-grid-",
-    "--bg-input-",
-    "--border-input-",
-    "--text-input-",
-    "--bg-btn-",
-    "--text-btn-",
-)
-
 
 class TestCLI(unittest.TestCase):
     def test_json_to_stdout(self):
@@ -37,7 +26,6 @@ class TestCLI(unittest.TestCase):
         self.assertIn("oklch", payload)
         self.assertIn("bg-surface-root", payload["semantic"]["light"])
         self.assertIn("step-12", payload["global"]["light"])
-        self.assertNotIn("component", payload)
 
     def test_json_to_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -80,15 +68,6 @@ class TestCLI(unittest.TestCase):
         self.assertIn("/* app canvas background */", text)
         self.assertIn("/* primary brand buttons */", text)
 
-    def test_tailwind_css_has_no_component_tokens(self):
-        out = io.StringIO()
-        with redirect_stdout(out):
-            main(["6366f1"])
-        text = out.getvalue()
-        for marker in COMPONENT_MARKERS:
-            with self.subTest(marker=marker):
-                self.assertNotIn(marker, text)
-
     def test_tailwind_v4_css_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "theme.css"
@@ -115,9 +94,6 @@ class TestCLI(unittest.TestCase):
             self.assertIn("foreground: { primary: 'var(--text-primary)'", config)
             self.assertIn("on: { accent: 'var(--text-on-accent)'", config)
             self.assertIn("action: { primary: 'var(--bg-action-primary)'", config)
-            self.assertNotIn("grid:", config)
-            self.assertNotIn("input:", config)
-            self.assertNotIn("btn:", config)
             # usage hints
             self.assertIn("// surfaces - canvas, cards, hover/active rows", config)
             self.assertIn("// actions - brand execution buttons", config)
@@ -127,8 +103,6 @@ class TestCLI(unittest.TestCase):
             self.assertIn("--bg-surface-root: var(--step-1);", css)
             self.assertIn("/* app canvas background */", css)
             self.assertIn("/* critical numbers & main titles */", css)
-            for marker in COMPONENT_MARKERS:
-                self.assertNotIn(marker, css)
 
     def test_tailwind_unknown_extension_becomes_v3(self):
         with tempfile.TemporaryDirectory() as tmp:

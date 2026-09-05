@@ -1,9 +1,8 @@
 """chroma.py — deterministic semantic theme generation for enterprise frontends.
 
 Weave a complete, dual-theme (Light/Dark) semantic token configuration from a
-single structural brand hue coordinate, compiled in OKLCH across three Atmos
-tiers: global (raw math), semantic (functional intent) and component (explicit
-UI placements).
+single structural brand hue coordinate, compiled in OKLCH across two Atmos
+tiers: global (raw math) and semantic (functional intent).
 """
 
 __version__ = "1.0.0"

@@ -38,17 +38,6 @@ class TestSemanticToGlobal(unittest.TestCase):
                         body["semantic"]["text-on-accent"], body["global"]["accent-on"]
                     )
 
-    def test_no_component_layer_generated(self):
-        for brand in BRANDS:
-            with self.subTest(brand=brand):
-                body = build_layers(brand)
-                for theme_name in ("light", "dark"):
-                    self.assertEqual(set(body[theme_name]), {"global", "semantic"})
-                    for name in body[theme_name]["semantic"]:
-                        self.assertNotIn("grid", name)
-                        self.assertNotIn("btn", name)
-                        self.assertNotIn("input", name)
-
 
 if __name__ == "__main__":
     unittest.main()
