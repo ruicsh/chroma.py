@@ -12,6 +12,7 @@ from chroma.serializers import (
     emit_json,
     emit_ts,
     emit_tailwind,
+    emit_tailwind_v3,
 )
 from chroma.tokens import build_layers, verify_contrast
 
@@ -61,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "-f",
         "--format",
-        choices=("json", "tailwind", "css", "ts", "dtcg"),
+        choices=("json", "tailwind", "tailwind-v3", "css", "ts", "dtcg"),
         default="tailwind",
         help="The configuration file target standard (Default: tailwind)",
     )
@@ -96,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
         emit_ts(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "dtcg":
         emit_dtcg(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "tailwind-v3":
+        emit_tailwind_v3(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     else:
         emit_tailwind(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     return 0

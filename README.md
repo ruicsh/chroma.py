@@ -73,14 +73,15 @@ With `--preserve-vibrancy`, the accent is instead **locked exactly** to the mark
 
 ### Tailwind output resolution
 
-`-f tailwind` adapts to your Tailwind major version through the `-o` target:
+`-f tailwind` adapts to your Tailwind major version through the `-o` target; `-f tailwind-v3` forces the v3 config explicitly:
 
-| Output target        | Result                                                                                                                                                         |
-| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _(stdout / no `-o`)_ | Self-contained **Tailwind v4** stylesheet (`@theme inline` + `@custom-variant dark` + `:root`/`.dark` tokens)                                                  |
-| `theme.css`          | Self-contained **Tailwind v4** stylesheet                                                                                                                      |
-| `tailwind.config.js` | **Tailwind v3** `config.js` (`darkMode: 'class'`, colors → `var(--token)`) **plus** a companion `tailwind.config.css` defining the `:root` / `.dark` variables |
-| any other name       | Treated as v3 config (`.js` + `.css` emitted)                                                                                                                  |
+| Format / target                      | Result                                                                                                                                                         |
+| :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-f tailwind` _(stdout / no `-o`)_   | Self-contained **Tailwind v4** stylesheet (`@theme inline` + `@custom-variant dark` + `:root`/`.dark` tokens)                                                  |
+| `-f tailwind` + `theme.css`          | Self-contained **Tailwind v4** stylesheet                                                                                                                      |
+| `-f tailwind` + `tailwind.config.js` | **Tailwind v3** `config.js` (`darkMode: 'class'`, colors → `var(--token)`) **plus** a companion `tailwind.config.css` defining the `:root` / `.dark` variables |
+| `-f tailwind-v3`                     | **Tailwind v3** `config.js` (+ companion `.css` when given `-o`); stdout carries the `config.js` only                                                          |
+| `-f tailwind` + any other name       | Treated as v3 config (`.js` + `.css` emitted)                                                                                                                  |
 
 The global ramps are emitted as **hex** (maximum browser compatibility); the semantic tokens chain through CSS custom properties (`--bg-surface-root: var(--step-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the four core semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names:
 
@@ -122,13 +123,14 @@ All three targets emit only the **semantic tokens** (plus, for `css`, the global
 
 Committed sample outputs for every format, generated from the `6366f1` brand. Regenerate them with `make samples`:
 
-| Format          | Command                            | Sample                                                             |
-| :-------------- | :--------------------------------- | :----------------------------------------------------------------- |
-| `tailwind` (v4) | `python3 -m chroma 6366f1`         | [`samples/tailwind-v4.css`](samples/tailwind-v4.css)               |
-| `css`           | `python3 -m chroma 6366f1 -f css`  | [`samples/chroma.css`](samples/chroma.css)                         |
-| `ts`            | `python3 -m chroma 6366f1 -f ts`   | [`samples/chroma-theme.ts`](samples/chroma-theme.ts)               |
-| `dtcg`          | `python3 -m chroma 6366f1 -f dtcg` | [`samples/chroma-theme.dtcg.json`](samples/chroma-theme.dtcg.json) |
-| `json`          | `python3 -m chroma 6366f1 -f json` | [`samples/chroma-tokens.json`](samples/chroma-tokens.json)         |
+| Format          | Command                                   | Sample                                                             |
+| :-------------- | :---------------------------------------- | :----------------------------------------------------------------- |
+| `tailwind` (v4) | `python3 -m chroma 6366f1`                | [`samples/tailwind-v4.css`](samples/tailwind-v4.css)               |
+| `tailwind-v3`   | `python3 -m chroma 6366f1 -f tailwind-v3` | [`samples/tailwind-v3.js`](samples/tailwind-v3.js)                 |
+| `css`           | `python3 -m chroma 6366f1 -f css`         | [`samples/chroma.css`](samples/chroma.css)                         |
+| `ts`            | `python3 -m chroma 6366f1 -f ts`          | [`samples/chroma-theme.ts`](samples/chroma-theme.ts)               |
+| `dtcg`          | `python3 -m chroma 6366f1 -f dtcg`        | [`samples/chroma-theme.dtcg.json`](samples/chroma-theme.dtcg.json) |
+| `json`          | `python3 -m chroma 6366f1 -f json`        | [`samples/chroma-tokens.json`](samples/chroma-tokens.json)         |
 
 A sync test in the suite asserts every committed sample byte-matches fresh output, so the samples can never drift from the code.
 
@@ -326,7 +328,7 @@ python3 -m chroma 00ffff --preserve-vibrancy
 ### CLI reference
 
 ```bash
-usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,css,ts,dtcg}] [--preserve-vibrancy] hex
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg}] [--preserve-vibrancy] hex
 
 Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
 from one brand color hex.
@@ -338,7 +340,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -o, --output OUTPUT   Output file path instead of writing to stdout
-  -f, --format {json,tailwind,css,ts,dtcg}
+  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg}
                         The configuration file target standard (Default: tailwind)
   --preserve-vibrancy   Lock the brand accent exactly and solve the on-color
                         label for AAA instead of shifting accent lightness
@@ -360,7 +362,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (58 test cases and counting).
+All tests pass (60 test cases and counting).
 
 ---
 

@@ -377,6 +377,34 @@ def emit_tailwind(
     print(f"wrote {companion}", file=sys.stderr)
 
 
+def emit_tailwind_v3(
+    layers: dict[str, dict[str, dict[str, str]]],
+    output: str | None,
+    preserve_vibrancy: bool = False,
+) -> None:
+    """Resolve the tailwind-v3 format by output target.
+
+    Emits a Tailwind v3 ``config.js`` (colors -> CSS vars) plus its companion
+    ``.css`` variable file. With no ``-o``, only the config.js can reach stdout;
+    the companion is noted on stderr.
+    """
+    if output is None:
+        sys.stdout.write(serialize_tailwind_v3_config())
+        print(
+            "companion variable sheet not shown on stdout; pass -o <path> to "
+            "write both tailwind.config.js and tailwind.config.css",
+            file=sys.stderr,
+        )
+        return
+    path = Path(output)
+    config = path if path.suffix == ".js" else path.with_suffix(".js")
+    companion = config.with_suffix(".css")
+    config.write_text(serialize_tailwind_v3_config())
+    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy))
+    print(f"wrote {config}", file=sys.stderr)
+    print(f"wrote {companion}", file=sys.stderr)
+
+
 # ---------------------------------------------------------------------------
 # TypeScript
 # ---------------------------------------------------------------------------

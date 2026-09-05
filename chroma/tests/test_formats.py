@@ -14,6 +14,7 @@ from chroma.serializers import (
     serialize_css,
     serialize_dtcg,
     serialize_json,
+    serialize_tailwind_v3_config,
     serialize_tailwind_v4_css,
     serialize_ts,
 )
@@ -157,10 +158,43 @@ class TestDtcgFormat(unittest.TestCase):
                 )
 
 
+class TestTailwindV3Format(unittest.TestCase):
+    def test_v3_config_to_stdout(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main([BRAND, "-f", "tailwind-v3"])
+        self.assertEqual(code, 0)
+        text = out.getvalue()
+        self.assertIn("module.exports = {", text)
+        self.assertIn("darkMode: 'class'", text)
+        self.assertIn("colors: {", text)
+        self.assertIn("// actions - brand execution buttons", text)
+        self.assertIn("surface: {", text)
+        self.assertIn("foreground: {", text)
+        self.assertIn("border: {", text)
+        self.assertIn("on: {", text)
+
+    def test_v3_writes_config_and_companion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "tailwind.config.js"
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main([BRAND, "-f", "tailwind-v3", "-o", str(target)])
+            self.assertEqual(code, 0)
+            config = target.read_text()
+            self.assertIn("module.exports = {", config)
+            self.assertIn("darkMode: 'class'", config)
+            companion = target.with_suffix(".css")
+            self.assertTrue(companion.exists())
+            self.assertEqual(companion.read_text(), serialize_css(build_layers(BRAND)))
+            self.assertIn("wrote", err.getvalue())
+
+
 class TestSampleSync(unittest.TestCase):
     def _expected_samples(self):
         layers = build_layers(BRAND)
         yield "tailwind-v4.css", serialize_tailwind_v4_css(layers)
+        yield "tailwind-v3.js", serialize_tailwind_v3_config()
         yield "chroma.css", serialize_css(layers)
         yield "chroma-theme.ts", serialize_ts(layers)
         yield "chroma-theme.dtcg.json", serialize_dtcg(layers)

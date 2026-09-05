@@ -17,6 +17,7 @@ run:
 
 samples:
 	python3 -m chroma 6366f1 -o samples/tailwind-v4.css
+	python3 -m chroma 6366f1 -f tailwind-v3 -o samples/tailwind-v3.js
 	python3 -m chroma 6366f1 -f css -o samples/chroma.css
 	python3 -m chroma 6366f1 -f ts -o samples/chroma-theme.ts
 	python3 -m chroma 6366f1 -f dtcg -o samples/chroma-theme.dtcg.json
