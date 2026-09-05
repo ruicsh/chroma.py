@@ -28,13 +28,11 @@ BRANDS = (
 
 
 class TestLayerStructure(unittest.TestCase):
-    def test_three_tiers_present(self):
+    def test_two_tiers_present(self):
         layers = build_layers("6366f1")
         for theme_name in ("light", "dark"):
             with self.subTest(theme=theme_name):
-                self.assertEqual(
-                    set(layers[theme_name]), {"global", "semantic", "component"}
-                )
+                self.assertEqual(set(layers[theme_name]), {"global", "semantic"})
                 self.assertEqual(
                     set(layers[theme_name]["global"]),
                     set(STEP_KEYS) | set(ACCENT_TOKEN_NAMES),
@@ -116,7 +114,7 @@ class TestAccent(unittest.TestCase):
     def test_accent_hue_locked(self):
         brand = parse_hex("6366f1")
         _, _, brand_hue = rgb_to_oklch(brand)
-        scale = accent_scale(brand, THEMES["dark"].focus_lightness)
+        scale = accent_scale(brand)
         for name, (_, _, hue) in scale.items():
             if name == "accent-on":  # black/white carry no hue
                 continue

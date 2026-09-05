@@ -1,8 +1,8 @@
-"""Tests for the Atmos three-tier token taxonomy (global -> semantic -> component)."""
+"""Tests for the Atmos semantic-layer taxonomy (semantic -> global)."""
 
 import unittest
 
-from chroma import COMPONENT_TO_SEMANTIC, SEMANTIC_TO_GLOBAL, build_layers
+from chroma import SEMANTIC_TO_GLOBAL, build_layers
 
 BRANDS = ("6366f1", "10b981", "ef4444", "f59e0b", "111827")
 
@@ -38,35 +38,16 @@ class TestSemanticToGlobal(unittest.TestCase):
                         body["semantic"]["text-on-accent"], body["global"]["accent-on"]
                     )
 
-
-class TestComponentToSemantic(unittest.TestCase):
-    def test_component_tokens_resolve_to_exact_semantic_sources(self):
-        for brand in BRANDS:
-            layers = build_layers(brand)
-            for theme_name in ("light", "dark"):
-                with self.subTest(brand=brand, theme=theme_name):
-                    for (
-                        component_token,
-                        semantic_token,
-                    ) in COMPONENT_TO_SEMANTIC.items():
-                        self.assertEqual(
-                            layers[theme_name]["component"][component_token],
-                            layers[theme_name]["semantic"][semantic_token],
-                            (component_token, semantic_token),
-                        )
-
-    def test_grid_value_is_primary_text(self):
+    def test_no_component_layer_generated(self):
         for brand in BRANDS:
             with self.subTest(brand=brand):
-                body = build_layers(brand)["light"]
-                self.assertEqual(
-                    body["component"]["text-grid-value"],
-                    body["semantic"]["text-primary"],
-                )
-                self.assertEqual(
-                    body["component"]["text-btn-primary-glyph"],
-                    body["semantic"]["text-on-accent"],
-                )
+                body = build_layers(brand)
+                for theme_name in ("light", "dark"):
+                    self.assertEqual(set(body[theme_name]), {"global", "semantic"})
+                    for name in body[theme_name]["semantic"]:
+                        self.assertNotIn("grid", name)
+                        self.assertNotIn("btn", name)
+                        self.assertNotIn("input", name)
 
 
 if __name__ == "__main__":

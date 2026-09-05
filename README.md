@@ -27,19 +27,19 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 
 ---
 
-## The Structural Token Architecture: Atmos Three-Tier Taxonomy
+## The Structural Token Architecture: Atmos Token Taxonomy
 
-`chroma` rejects arbitrary design names. It compiles tokens across **three abstraction tiers** — the industry-standard [Atmos UI](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design) taxonomy — so application code stays decoupled from branding changes. The raw math follows the [Radix UI 12-step protocol](https://www.radix-ui.com/colors): each step is evaluated from an explicit, monotonic interpolation curve in OKLCH, then bound to functional intent (semantic), then pinned to explicit UI placements (component).
+`chroma` rejects arbitrary design names. It compiles tokens across the **Atmos UI** [taxonomy tiers](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design) so application code stays decoupled from branding changes. The raw math follows the [Radix UI 12-step protocol](https://www.radix-ui.com/colors): each step is evaluated from an explicit, monotonic interpolation curve in OKLCH, then bound to functional intent (semantic). **Layer 3 (component) tokens are not generated** — they belong in the code layer, mapped onto semantic tokens inside your component/style objects (see [Component tokens (code layer)](#component-tokens-code-layer)).
 
 ```
-[ 1. GLOBAL TOKENS ]  ───►  [ 2. SEMANTIC TOKENS ]  ───►  [ 3. COMPONENT TOKENS ]
-   Raw Palette Options          Functional Meaning             Explicit UI Placements
-   (e.g. step-3, accent)        (e.g. bg-surface-default)      (e.g. bg-grid-row-hover)
+[ 1. GLOBAL TOKENS ]  ───►  [ 2. SEMANTIC TOKENS ]  ───►  [ code layer ]
+   Raw Palette Options          Functional Meaning            Component aliases
+   (e.g. step-3, accent)        (e.g. bg-surface-default)     (e.g. bg-grid-row-hover)
 ```
 
 ### 1. Global Tokens (the raw math)
 
-The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue) plus the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`, `accent-focus`). Component templates never consume these directly.
+The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue) plus the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`). Component templates never consume these directly.
 
 ### 2. Semantic Tokens (functional intent → global)
 
@@ -65,24 +65,38 @@ The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chr
 
 The brand accent is **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until its on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white. Hover/active vary **chroma** at the same lightness, so the AAA guarantee holds across interaction states. Actions reference the **brand accent**, not a neutral gray — neutral buttons blend into layout containers, while the brand coordinate acts as an unmistakable execution beacon.
 
-### 3. Component Tokens (explicit UI placements → semantic)
+### Component tokens (code layer)
 
-| Component token           | Resolves to        |
-| :------------------------ | :----------------- |
-| `bg-grid-header`          | `bg-surface-subtle` |
-| `bg-grid-row-hover`       | `bg-surface-hover`  |
-| `bg-grid-row-selected`    | `bg-surface-active` |
-| `border-grid-cell`        | `border-subtle`     |
-| `text-grid-value`         | `text-primary`      |
-| `bg-input-field`          | `bg-surface-subtle` |
-| `border-input-default`    | `border-default`    |
-| `border-input-focus`      | `border-strong`     |
-| `text-input-placeholder`  | `text-disabled`     |
-| `bg-btn-primary-default`  | `bg-action-primary` |
-| `bg-btn-primary-hover`    | `bg-action-hover`   |
-| `text-btn-primary-glyph`  | `text-on-accent`    |
+Component aliases are **not generated** by `chroma` — the CSS ships only the global ramps and semantic intent, so your theme file stays small and focused. Instead, apply component mappings directly in your layout code, deriving them from semantic utilities:
 
-Changing a single component token never affects the rest of the ecosystem; changing the raw global math re-themes the entire stack.
+| Component token          | Derived from       |
+| :----------------------- | :----------------- |
+| `bg-grid-header`         | `bg-surface-subtle` |
+| `bg-grid-row-hover`      | `bg-surface-hover`  |
+| `bg-grid-row-selected`   | `bg-surface-active` |
+| `border-grid-cell`       | `border-border-subtle` |
+| `text-grid-value`        | `text-foreground-primary` |
+| `bg-input-field`         | `bg-surface-subtle` |
+| `border-input-default`   | `border-border-default` |
+| `border-input-focus`     | `border-border-strong` |
+| `text-input-placeholder` | `text-foreground-disabled` |
+| `bg-btn-primary-default` | `bg-action-primary` |
+| `bg-btn-primary-hover`   | `bg-action-hover`   |
+| `text-btn-primary-glyph` | `text-on-accent`    |
+
+In React, that is a local style map or utility alias:
+
+```ts
+const grid = {
+  header: "bg-surface-subtle",
+  rowHover: "bg-surface-hover",
+  rowSelected: "bg-surface-active",
+  cell: "border-border-subtle",
+  value: "text-foreground-primary",
+};
+```
+
+Keeping these aliases in the code layer means a single component's styling can evolve without touching — or breaking — the global theme.
 
 ---
 
@@ -135,7 +149,7 @@ options:
 | `tailwind.config.js` | **Tailwind v3** `config.js` (`darkMode: 'class'`, colors → `var(--token)`) **plus** a companion `tailwind.config.css` defining the `:root` / `.dark` variables |
 | any other name       | Treated as v3 config (`.js` + `.css` emitted)                                                                                                                  |
 
-The `tailwind` format uses **hex** values for maximum browser compatibility. The three tiers are chained through CSS custom properties (`--bg-grid-header: var(--bg-surface-subtle)` → `--bg-surface-subtle: var(--step-3)`), so the raw global values remain the single source of truth. The Tailwind `colors` object exposes **semantic + component** tokens only (global is never consumed directly by components), using utility-friendly names:
+The `tailwind` format uses **hex** values for maximum browser compatibility. The two tiers are chained through CSS custom properties (`--bg-surface-root: var(--step-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the four core semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names:
 
 | Token group | Utility example                |
 | :---------- | :----------------------------- |
@@ -144,19 +158,16 @@ The `tailwind` format uses **hex** values for maximum browser compatibility. The
 | `border`    | `border-border-subtle` *(the one accepted double prefix)* |
 | `action`    | `bg-action-primary`            |
 | `on`        | `text-on-accent`               |
-| `grid`      | `bg-grid-header` / `border-grid-cell` / `text-grid-value` |
-| `input`     | `bg-input-field` / `border-input-focus` / `text-input-placeholder` |
-| `btn`       | `bg-btn-primary-default` / `text-btn-primary-glyph` |
 
 ### Comprehensive Integration Example
 
-To output a pure, raw programmatic JSON matrix — with all three tiers in hex and OKLCH plus brand metadata — to feed straight into an advanced charting library or web-component configuration pipeline:
+To output a pure, raw programmatic JSON matrix — with both tiers in hex and OKLCH plus brand metadata — to feed straight into an advanced charting library or web-component configuration pipeline:
 
 ```bash
 python3 -m chroma 10b981 --format json --output branding-tokens.json
 ```
 
-The `json` document has the shape `{ "meta": …, "global": {theme: {token: hex}}, "semantic": …, "component": …, "oklch": {layer: {theme: {token: "L C H"}}} }`.
+The `json` document has the shape `{ "meta": …, "global": {theme: {token: hex}}, "semantic": …, "oklch": {layer: {theme: {token: "L C H"}}} }`.
 
 ---
 
@@ -176,7 +187,8 @@ The system ships a test suite that enforces its own contract:
 
 - Hex parsing (`#RRGGBB` / `RRGGBB` / `#RGB` / `RGB`) and OKLCH round-trip fidelity.
 - Monotonic 12-step lightness, surface lightness bands, and neutral chroma caps.
-- **Taxonomy integrity:** every semantic token resolves to its exact global source and every component token to its exact semantic source.
+- **Taxonomy integrity:** every semantic token resolves to its exact global source.
+- **No component tokens in output:** the CSS/JSON emit only global + semantic; component aliases are documented for the code layer.
 - **WCAG AAA:** `text-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
 

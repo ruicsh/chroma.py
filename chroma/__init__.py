@@ -27,7 +27,6 @@ from chroma.serializers import (
 )
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
-    COMPONENT_TO_SEMANTIC,
     DARK,
     LIGHT,
     SEMANTIC_TO_GLOBAL,
@@ -41,7 +40,6 @@ from chroma.tokens import (
 
 __all__ = [
     "ACCENT_TOKEN_NAMES",
-    "COMPONENT_TO_SEMANTIC",
     "DARK",
     "LIGHT",
     "SEMANTIC_TO_GLOBAL",
