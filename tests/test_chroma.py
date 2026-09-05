@@ -124,3 +124,103 @@ def test_parse_and_contrast_black_white():
     assert chroma.contrast_ratio(chroma.parse_hex("000000"), chroma.parse_hex("ffffff")) == pytest.approx(
         21.0, abs=1e-6
     )
+
+
+# ---------------------------------------------------------------------------
+# Semantic token system
+# ---------------------------------------------------------------------------
+
+BRANDS = ("6366f1", "10b981", "ef4444", "f59e0b", "111827", "f8fafc", "06b6d4", "0ea5e9", "8b5cf6", "f472b6")
+
+
+def test_theme_structure_has_all_token_families():
+    themes = chroma.build_themes("6366f1")
+    expected = set(chroma.NEUTRAL_TOKEN_STEPS) | {
+        "intent-primary",
+        "intent-primary-hover",
+        "intent-primary-active",
+        "intent-on-primary",
+        "intent-focus-ring",
+    }
+    for theme_name in ("light", "dark"):
+        assert set(themes[theme_name]) == expected
+        for value in themes[theme_name].values():
+            assert len(value) == 7 and value.startswith("#")
+
+
+def test_neutral_lightness_is_monotonic():
+    for theme_name in ("dark", "light"):
+        theme = chroma.THEMES[theme_name]
+        for group, steps in (
+            ("surface", ["surface-root", "surface-subtle", "surface-default", "surface-elevated", "surface-active"]),
+            ("border", ["border-subtle", "border-default", "border-strong"]),
+            ("text", ["text-muted", "text-secondary", "text-primary"]),
+        ):
+            values = [chroma._interp(theme.lightness_controls, (chroma.NEUTRAL_TOKEN_STEPS[name] - 1) / 11.0) for name in steps]
+            if theme_name == "dark":
+                assert values == sorted(values), (theme_name, group)
+            else:
+                assert values == sorted(values, reverse=True), (theme_name, group)
+
+
+@pytest.mark.parametrize("brand", BRANDS)
+def test_neutral_hue_locked_to_brand(brand):
+    _, _, brand_hue = chroma.rgb_to_oklch(chroma.parse_hex(brand))
+    for theme_name in ("light", "dark"):
+        scale = chroma.neutral_scale(chroma.THEMES[theme_name], brand_hue)
+        for name, (_, _, hue) in scale.items():
+            assert hue == pytest.approx(brand_hue, abs=1e-9), name
+
+
+@pytest.mark.parametrize("brand", BRANDS)
+def test_surface_lightness_bands(brand):
+    _, _, brand_hue = chroma.rgb_to_oklch(chroma.parse_hex(brand))
+    for theme_name in ("light", "dark"):
+        scale = chroma.neutral_scale(chroma.THEMES[theme_name], brand_hue)
+        surfaces = [scale[name][0] for name in chroma.NEUTRAL_TOKEN_STEPS if name.startswith("surface")]
+        if theme_name == "dark":
+            assert max(surfaces) <= 0.32
+            assert chroma.neutral_scale(chroma.THEMES[theme_name], brand_hue)["surface-root"][0] <= 0.20
+        else:
+            assert min(surfaces) >= 0.93
+
+
+@pytest.mark.parametrize("brand", BRANDS)
+def test_neutral_chroma_caps(brand):
+    _, _, brand_hue = chroma.rgb_to_oklch(chroma.parse_hex(brand))
+    for theme_name in ("light", "dark"):
+        scale = chroma.neutral_scale(chroma.THEMES[theme_name], brand_hue)
+        chromas = [value[1] for value in scale.values()]
+        cap = 0.04 if theme_name == "dark" else 0.015
+        assert max(chromas) <= cap
+
+
+@pytest.mark.parametrize("brand", BRANDS)
+def test_aaa_contrast_guarantees(brand):
+    themes = chroma.build_themes(brand)
+    report = chroma.verify_contrast(themes)
+    for theme_name in ("light", "dark"):
+        for pairing, ratio in report[theme_name].items():
+            if pairing.startswith("text-muted"):
+                continue
+            if pairing.startswith("text-secondary"):
+                assert ratio >= 4.5, (brand, theme_name, pairing, ratio)
+            else:
+                assert ratio >= 7.0, (brand, theme_name, pairing, ratio)
+
+
+def test_intent_on_color_polarity():
+    # Dark navy prefers white on-color; bright emerald prefers black.
+    dark_brand = chroma.build_themes("111827")
+    bright_brand = chroma.build_themes("10b981")
+    assert dark_brand["light"]["intent-on-primary"] == "#ffffff"
+    assert bright_brand["light"]["intent-on-primary"] == "#000000"
+
+
+def test_intent_preserves_brand_hue_and_is_vivid():
+    themes = chroma.build_themes("10b981")
+    assert themes["light"]["intent-primary"] == "#10b981"  # already AAA with black text -> unchanged
+
+
+def test_generation_is_deterministic():
+    assert chroma.build_themes("6366f1") == chroma.build_themes("6366f1")
