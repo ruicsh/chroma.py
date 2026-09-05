@@ -6,11 +6,18 @@ from chroma import build_layers, verify_contrast
 from chroma.color import parse_hex, relative_luminance, rgb_to_oklch
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
+    BRAND_SCALE_NAMES,
+    STATUS_FAMILIES,
+    STATUS_SPECS,
+    STATUS_TOKEN_NAMES,
     STEP_KEYS,
     THEMES,
     _interp,
     accent_scale,
+    brand_scale_steps,
     neutral_steps,
+    status_scale,
+    status_scale_steps,
 )
 
 BRANDS = (
@@ -35,7 +42,10 @@ class TestLayerStructure(unittest.TestCase):
                 self.assertEqual(set(layers[theme_name]), {"global", "semantic"})
                 self.assertEqual(
                     set(layers[theme_name]["global"]),
-                    set(STEP_KEYS) | set(ACCENT_TOKEN_NAMES),
+                    set(STEP_KEYS)
+                    | set(ACCENT_TOKEN_NAMES)
+                    | set(BRAND_SCALE_NAMES)
+                    | set(STATUS_TOKEN_NAMES),
                 )
                 for value in layers[theme_name]["global"].values():
                     self.assertEqual(len(value), 7)
@@ -166,6 +176,134 @@ class TestPreserveVibrancy(unittest.TestCase):
         )
 
 
+class TestStatusScale(unittest.TestCase):
+    def test_hues_are_canonical(self):
+        for theme_name in ("light", "dark"):
+            scale = status_scale(THEMES[theme_name])
+            with self.subTest(theme=theme_name):
+                for family, spec in STATUS_SPECS.items():
+                    for name, (_, _, hue) in scale.items():
+                        if name.startswith(f"{family}-") and not name.endswith("-on"):
+                            self.assertAlmostEqual(hue, spec["hue"], delta=1e-9)
+
+    def test_solids_are_theme_independent(self):
+        light = status_scale(THEMES["light"])
+        dark = status_scale(THEMES["dark"])
+        for family in STATUS_FAMILIES:
+            with self.subTest(family=family):
+                for token in (
+                    family,
+                    f"{family}-hover",
+                    f"{family}-active",
+                    f"{family}-on",
+                ):
+                    self.assertEqual(light[token], dark[token])
+
+    def test_on_color_polarity(self):
+        layers = build_layers("6366f1")
+        global_tokens = layers["light"]["global"]
+        self.assertEqual(global_tokens["success-on"], "#ffffff")
+        self.assertEqual(global_tokens["danger-on"], "#ffffff")
+        self.assertEqual(global_tokens["info-on"], "#ffffff")
+        self.assertEqual(global_tokens["warning-on"], "#000000")
+
+    def test_on_color_aa_across_states(self):
+        for brand in BRANDS:
+            layers = build_layers(brand)
+            report = verify_contrast(layers)
+            with self.subTest(brand=brand):
+                for theme_name in ("light", "dark"):
+                    for family in STATUS_FAMILIES:
+                        for state in (family, f"{family}-hover", f"{family}-active"):
+                            self.assertGreaterEqual(
+                                report[theme_name][f"text-on-{family}/{state}"],
+                                4.5,
+                                (brand, theme_name, family, state),
+                            )
+
+    def test_status_text_aa_on_surfaces(self):
+        for brand in BRANDS:
+            layers = build_layers(brand)
+            report = verify_contrast(layers)
+            with self.subTest(brand=brand):
+                for theme_name in ("light", "dark"):
+                    for family in STATUS_FAMILIES:
+                        for surface in (
+                            "bg-surface-root",
+                            "bg-surface-default",
+                            "bg-surface-subtle",
+                        ):
+                            self.assertGreaterEqual(
+                                report[theme_name][f"text-{family}/{surface}"],
+                                4.5,
+                                (brand, theme_name, family, surface),
+                            )
+
+    def test_subtle_and_border_chroma_caps(self):
+        # Under B1 the old subtle/border globals are removed; scale steps now
+        # carry the tints. Keep a regression check that the new scales stay
+        # within their peak chroma and that the removed globals no longer exist.
+        for theme_name in ("light", "dark"):
+            scale = status_scale(THEMES[theme_name])
+            with self.subTest(theme=theme_name):
+                for family in STATUS_FAMILIES:
+                    self.assertNotIn(f"{family}-subtle", scale)
+                    self.assertNotIn(f"{family}-border", scale)
+                    self.assertNotIn(f"{family}-text", scale)
+        for theme_name in ("light", "dark"):
+            steps = status_scale_steps(THEMES[theme_name])
+            with self.subTest(theme=theme_name):
+                for family in STATUS_FAMILIES:
+                    peak = STATUS_SPECS[family]["chroma"]
+                    # dark theme scales back ~10%
+                    expected_peak = peak * (0.9 if theme_name == "dark" else 1.0)
+                    for step in range(1, 13):
+                        c = steps[f"{family}-{step}"][1]
+                        self.assertLessEqual(c, expected_peak + 1e-9)
+                        self.assertGreaterEqual(c, 0.0)
+
+
+class TestColorRamps(unittest.TestCase):
+    def test_brand_scale_hue_locked(self):
+        for brand in BRANDS:
+            _, _, brand_hue = rgb_to_oklch(parse_hex(brand))
+            for theme_name in ("light", "dark"):
+                ramp = brand_scale_steps(THEMES[theme_name], parse_hex(brand))
+                with self.subTest(brand=brand, theme=theme_name):
+                    for step in range(1, 13):
+                        self.assertAlmostEqual(
+                            ramp[f"brand-{step}"][2], brand_hue, delta=1e-9
+                        )
+
+    def test_status_scale_hue_locked(self):
+        for theme_name in ("light", "dark"):
+            ramp = status_scale_steps(THEMES[theme_name])
+            with self.subTest(theme=theme_name):
+                for family, spec in STATUS_SPECS.items():
+                    for step in range(1, 13):
+                        self.assertAlmostEqual(
+                            ramp[f"{family}-{step}"][2], spec["hue"], delta=1e-9
+                        )
+
+    def test_scales_are_deterministic(self):
+        for theme_name in ("light", "dark"):
+            brand = parse_hex("6366f1")
+            self.assertEqual(
+                brand_scale_steps(THEMES[theme_name], brand),
+                brand_scale_steps(THEMES[theme_name], brand),
+            )
+            self.assertEqual(
+                status_scale_steps(THEMES[theme_name]),
+                status_scale_steps(THEMES[theme_name]),
+            )
+
+    def test_brand_scale_length(self):
+        for theme_name in ("light", "dark"):
+            ramp = brand_scale_steps(THEMES[theme_name], parse_hex("6366f1"))
+            self.assertEqual(len(ramp), 12)
+            self.assertEqual(set(ramp), set(BRAND_SCALE_NAMES))
+
+
 class TestContrastGuarantees(unittest.TestCase):
     def test_aaa_guarantees(self):
         for brand in BRANDS:
@@ -177,6 +315,14 @@ class TestContrastGuarantees(unittest.TestCase):
                         if pairing.startswith("text-muted"):
                             continue
                         if pairing.startswith("text-secondary"):
+                            self.assertGreaterEqual(
+                                ratio, 4.5, (brand, theme_name, pairing)
+                            )
+                        elif any(
+                            pairing.startswith(f"text-{family}")
+                            or pairing.startswith(f"text-on-{family}")
+                            for family in STATUS_FAMILIES
+                        ):
                             self.assertGreaterEqual(
                                 ratio, 4.5, (brand, theme_name, pairing)
                             )

@@ -156,10 +156,28 @@ class TestDtcgFormat(unittest.TestCase):
         payload = json.loads(out.getvalue())
         for theme_name in ("light", "dark"):
             with self.subTest(theme=theme_name):
-                self.assertEqual(set(payload[theme_name]["bg"]), {"surface", "action"})
                 self.assertEqual(
-                    set(payload[theme_name]["border"]), {"subtle", "default", "strong"}
+                    set(payload[theme_name]["bg"]),
+                    {"surface", "action", "success", "warning", "danger", "info"},
                 )
+                self.assertEqual(
+                    set(payload[theme_name]["border"]),
+                    {
+                        "subtle",
+                        "default",
+                        "strong",
+                        "success",
+                        "warning",
+                        "danger",
+                        "info",
+                    },
+                )
+                for family in ("success", "warning", "danger", "info"):
+                    with self.subTest(family=family):
+                        self.assertEqual(
+                            set(payload[theme_name]["bg"][family]),
+                            {"subtle", "strong"},
+                        )
 
 
 class TestTailwindV3Format(unittest.TestCase):
@@ -358,6 +376,87 @@ class TestStylusFormat(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertIn("chroma-theme = {", target.read_text())
             self.assertIn("wrote", err.getvalue())
+
+
+class TestStatusFormats(unittest.TestCase):
+    def test_css_emits_status_ramp_and_semantics(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "css"])
+        text = out.getvalue()
+        layers = build_layers(BRAND)
+        light = layers["light"]
+        self.assertIn("/* The Four Semantic Status Coordinates */", text)
+        self.assertIn("/* Brand Shade Scale", text)
+        self.assertIn("/* Status Shade Scales", text)
+        for family in ("success", "warning", "danger", "info"):
+            with self.subTest(family=family):
+                self.assertIn(f"--{family}: {light['global'][family]};", text)
+                self.assertIn(f"--bg-{family}-subtle: var(--{family}-2);", text)
+                self.assertIn(f"--border-{family}: var(--{family}-6);", text)
+                self.assertIn(f"--text-{family}: var(--{family}-11);", text)
+                self.assertIn(f"--bg-{family}-strong: var(--{family});", text)
+
+    def test_tailwind_exposes_status_groups(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND])
+        text = out.getvalue()
+        for family in ("success", "warning", "danger", "info"):
+            with self.subTest(family=family):
+                self.assertIn(
+                    f"--color-surface-{family}-subtle: var(--bg-{family}-subtle);",
+                    text,
+                )
+                self.assertIn(
+                    f"--color-foreground-{family}: var(--text-{family});", text
+                )
+                self.assertIn(f"--color-border-{family}: var(--border-{family});", text)
+                self.assertIn(f"--color-on-{family}: var(--text-on-{family});", text)
+
+    def test_ts_emits_status_keys(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "ts"])
+        text = out.getvalue()
+        layers = build_layers(BRAND)
+        for family in ("success", "warning", "danger", "info"):
+            with self.subTest(family=family):
+                self.assertIn(f"bg{family.capitalize()}Subtle:", text)
+                self.assertIn(f"bg{family.capitalize()}Strong:", text)
+                self.assertIn(f"border{family.capitalize()}:", text)
+                self.assertIn(f"text{family.capitalize()}:", text)
+                self.assertIn(f"textOn{family.capitalize()}:", text)
+                self.assertIn(
+                    f"bg{family.capitalize()}Subtle: "
+                    f"'{layers['light']['semantic'][f'bg-{family}-subtle']}',",
+                    text,
+                )
+
+    def test_dtcg_status_tree_nests_cleanly(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "dtcg"])
+        payload = json.loads(out.getvalue())
+        for theme_name in ("light", "dark"):
+            for family in ("success", "warning", "danger", "info"):
+                with self.subTest(theme=theme_name, family=family):
+                    self.assertEqual(
+                        set(payload[theme_name]["bg"][family]), {"subtle", "strong"}
+                    )
+                    self.assertIn("$value", payload[theme_name]["text"][family])
+                    self.assertIn("$value", payload[theme_name]["text"]["on"][family])
+
+    def test_sass_emits_status_section(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "sass"])
+        text = out.getvalue()
+        self.assertIn("// The Four Semantic Status Coordinates", text)
+        layers = build_layers(BRAND)
+        for family in ("success", "warning", "danger", "info"):
+            with self.subTest(family=family):
+                self.assertIn(f"{family}: {layers['light']['global'][family]},", text)
 
 
 class TestSampleSync(unittest.TestCase):

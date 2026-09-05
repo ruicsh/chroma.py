@@ -13,7 +13,14 @@ from pathlib import Path
 
 from chroma import __version__
 from chroma.color import parse_hex, rgb_to_hsl, rgb_to_oklch
-from chroma.tokens import SEMANTIC_TO_GLOBAL, THEMES
+from chroma.tokens import (
+    BRAND_SCALE_NAMES,
+    SEMANTIC_TO_GLOBAL,
+    STATUS_COORD_NAMES,
+    STATUS_FAMILIES,
+    STATUS_SCALE_NAMES,
+    THEMES,
+)
 
 LAYERS = ("global", "semantic")
 
@@ -39,11 +46,33 @@ SEMANTIC_USAGE_HINTS: dict[str, str] = {
     "bg-action-active": "primary button pressed",
 }
 
+for _family in STATUS_FAMILIES:
+    SEMANTIC_USAGE_HINTS[f"bg-{_family}-subtle"] = (
+        f"{_family} tinted surfaces (alerts, badges)"
+    )
+    SEMANTIC_USAGE_HINTS[f"bg-{_family}-strong"] = f"{_family} solid fills"
+    SEMANTIC_USAGE_HINTS[f"border-{_family}"] = f"{_family} tinted borders"
+    SEMANTIC_USAGE_HINTS[f"text-{_family}"] = f"{_family} text on default surfaces"
+    SEMANTIC_USAGE_HINTS[f"text-on-{_family}"] = f"label/glyph on {_family} surfaces"
+
 ACCENT_USAGE_HINTS: dict[str, str] = {
     "accent": "brand accent (AAA-normalized)",
     "accent-hover": "accent hover",
     "accent-active": "accent pressed",
     "accent-on": "auto on-color for accent",
+}
+
+_STATUS_HINTS: dict[str, str] = {
+    "": "solid (AA on-color)",
+    "-hover": "hover",
+    "-active": "pressed",
+    "-on": "auto on-color",
+}
+
+STATUS_USAGE_HINTS: dict[str, str] = {
+    f"{family}{suffix}": f"{family} {meaning}"
+    for family in STATUS_FAMILIES
+    for suffix, meaning in _STATUS_HINTS.items()
 }
 
 # Tailwind utility class each ``@theme`` color maps to, shown as a hint.
@@ -57,10 +86,10 @@ UTILITY_PREFIX: dict[str, str] = {
 
 # Brief comment above each v3 config color group.
 GROUP_HINTS: dict[str, str] = {
-    "surface": "surfaces - canvas, cards, hover/active rows",
-    "foreground": "text - primary, secondary, muted, disabled",
-    "border": "borders - subtle rules, boundaries, focus",
-    "on": "on-color - label on accent surfaces",
+    "surface": "surfaces - canvas, cards, hover/active rows, status tints",
+    "foreground": "text - primary, secondary, muted, disabled, status",
+    "border": "borders - subtle rules, boundaries, focus, status",
+    "on": "on-color - labels on accent and status surfaces",
     "action": "actions - brand execution buttons",
 }
 
@@ -86,6 +115,15 @@ SEMANTIC_TOKEN_ORDER: tuple[str, ...] = (
     "bg-action-hover",
     "bg-action-active",
 )
+
+for _family in STATUS_FAMILIES:
+    SEMANTIC_TOKEN_ORDER += (
+        f"bg-{_family}-subtle",
+        f"bg-{_family}-strong",
+        f"border-{_family}",
+        f"text-{_family}",
+        f"text-on-{_family}",
+    )
 
 # Documented theme order (light first) for the ts / dtcg formats. The internal
 # ``layers`` map itself is keyed dark-first to match the pipeline iteration.
@@ -116,25 +154,48 @@ def _tailwind_color_map() -> dict[str, dict[str, str]]:
             "hover": "var(--bg-surface-hover)",
             "active": "var(--bg-surface-active)",
             "overlay": "var(--bg-surface-overlay)",
+            **_status_group("bg-", ("subtle", "strong")),
         },
         "foreground": {
             "primary": "var(--text-primary)",
             "secondary": "var(--text-secondary)",
             "muted": "var(--text-muted)",
             "disabled": "var(--text-disabled)",
+            **_status_group("text-", ("",)),
         },
         "border": {
             "subtle": "var(--border-subtle)",
             "default": "var(--border-default)",
             "strong": "var(--border-strong)",
+            **_status_group("border-", ("",)),
         },
-        "on": {"accent": "var(--text-on-accent)"},
+        "on": {
+            "accent": "var(--text-on-accent)",
+            **_status_group("text-on-", ("",)),
+        },
         "action": {
             "primary": "var(--bg-action-primary)",
             "hover": "var(--bg-action-hover)",
             "active": "var(--bg-action-active)",
         },
     }
+
+
+def _status_group(prefix: str, suffixes: tuple[str, ...]) -> dict[str, str]:
+    """Map the four status families into a Tailwind group.
+
+    ``prefix`` is the semantic token prefix (``bg-``, ``text-``, ``border-``,
+    ``text-on-``) and ``suffixes`` the per-family members, so e.g.
+    ``surface.success`` -> ``var(--bg-success)`` and
+    ``surface.success-subtle`` -> ``var(--bg-success-subtle)``.
+    """
+    group: dict[str, str] = {}
+    for family in STATUS_FAMILIES:
+        for suffix in suffixes:
+            key = f"{family}-{suffix}" if suffix else family
+            var = f"--{prefix}{family}-{suffix}" if suffix else f"--{prefix}{family}"
+            group[key] = f"var({var})"
+    return group
 
 
 # ---------------------------------------------------------------------------
@@ -254,11 +315,26 @@ def _var_block(
         if preserve_vibrancy
         else ACCENT_USAGE_HINTS["accent"]
     )
+    status_section_emitted = False
+    brand_section_emitted = False
+    status_scale_emitted = False
     for name, value in layers[theme_name]["global"].items():
         if name == "accent":
             lines.append("")
             lines.append("  /* The 10% High-Velocity Accent Coordinates */")
-        hint = ACCENT_USAGE_HINTS.get(name)
+        if name == BRAND_SCALE_NAMES[0] and not brand_section_emitted:
+            lines.append("")
+            lines.append("  /* Brand Shade Scale — 12-step chromatic ramp */")
+            brand_section_emitted = True
+        if name in STATUS_FAMILIES and not status_section_emitted:
+            lines.append("")
+            lines.append("  /* The Four Semantic Status Coordinates */")
+            status_section_emitted = True
+        if name == STATUS_SCALE_NAMES[0] and not status_scale_emitted:
+            lines.append("")
+            lines.append("  /* Status Shade Scales — 12-step per family */")
+            status_scale_emitted = True
+        hint = ACCENT_USAGE_HINTS.get(name) or STATUS_USAGE_HINTS.get(name)
         if name == "accent":
             hint = accent_hint
         lines.append(f"  --{name}: {value};{f'  /* {hint} */' if hint else ''}")
@@ -567,6 +643,9 @@ def emit_figma(
 # comment syntax so the map stays greppable and deterministic.
 _RAMP_COMMENT = "The 12-Step Mathematical Gray Ramp"
 _ACCENT_COMMENT = "The 10% High-Velocity Accent Coordinates"
+_BRAND_COMMENT = "Brand Shade Scale — 12-step chromatic ramp"
+_STATUS_COMMENT = "The Four Semantic Status Coordinates"
+_STATUS_SCALE_COMMENT = "Status Shade Scales — 12-step per family"
 _SEMANTIC_COMMENT = "Semantic Structural Mapping Matrix"
 
 # Root name of the emitted theme map in each preprocessor's native syntax.
@@ -594,6 +673,21 @@ def _token_sections(
             for name, value in global_tokens.items()
             if name.startswith("accent")
         }
+        brand = {
+            name: value
+            for name, value in global_tokens.items()
+            if name in BRAND_SCALE_NAMES
+        }
+        status_coords = {
+            name: value
+            for name, value in global_tokens.items()
+            if name in STATUS_COORD_NAMES
+        }
+        status_scales = {
+            name: value
+            for name, value in global_tokens.items()
+            if name in STATUS_SCALE_NAMES
+        }
         semantic = layers[theme_name]["semantic"]
         sections.append(
             (
@@ -601,6 +695,9 @@ def _token_sections(
                 [
                     (_RAMP_COMMENT, ramp),
                     (_ACCENT_COMMENT, accent),
+                    (_BRAND_COMMENT, brand),
+                    (_STATUS_COMMENT, status_coords),
+                    (_STATUS_SCALE_COMMENT, status_scales),
                     (_SEMANTIC_COMMENT, semantic),
                 ],
             )

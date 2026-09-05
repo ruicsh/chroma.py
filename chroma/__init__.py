@@ -5,7 +5,7 @@ single structural brand hue coordinate, compiled in OKLCH across two Atmos
 tiers: global (raw math) and semantic (functional intent).
 """
 
-__version__ = "1.0.0"
+__version__ = "1.2.0"
 
 from chroma.color import (
     contrast_ratio,
@@ -42,26 +42,46 @@ from chroma.serializers import (
 )
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
+    BRAND_SCALE_NAMES,
     DARK,
     LIGHT,
+    SCALE_STEP_LEGEND,
     SEMANTIC_TO_GLOBAL,
+    STATUS_COORD_NAMES,
+    STATUS_FAMILIES,
+    STATUS_SCALE_NAMES,
+    STATUS_SPECS,
+    STATUS_TOKEN_NAMES,
     STEP_KEYS,
     THEMES,
     accent_scale,
+    brand_scale_steps,
     build_layers,
+    color_ramp,
     neutral_steps,
+    status_scale,
+    status_scale_steps,
     verify_contrast,
 )
 
 __all__ = [
     "ACCENT_TOKEN_NAMES",
+    "BRAND_SCALE_NAMES",
     "DARK",
     "LIGHT",
+    "SCALE_STEP_LEGEND",
     "SEMANTIC_TO_GLOBAL",
+    "STATUS_COORD_NAMES",
+    "STATUS_FAMILIES",
+    "STATUS_SCALE_NAMES",
+    "STATUS_SPECS",
+    "STATUS_TOKEN_NAMES",
     "STEP_KEYS",
     "THEMES",
     "accent_scale",
+    "brand_scale_steps",
     "build_layers",
+    "color_ramp",
     "contrast_ratio",
     "emit_css",
     "emit_dtcg",
@@ -80,6 +100,8 @@ __all__ = [
     "rgb_to_hex",
     "rgb_to_hsl",
     "rgb_to_oklch",
+    "status_scale",
+    "status_scale_steps",
     "serialize_css",
     "serialize_dtcg",
     "serialize_figma",

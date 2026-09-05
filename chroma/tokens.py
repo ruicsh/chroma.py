@@ -18,6 +18,7 @@ intent (Atmos naming) to those steps.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TypedDict
 
 from chroma.color import (
     contrast_ratio,
@@ -32,6 +33,9 @@ _AAA_SOLID = 7.0  # accent solid vs its on-color label
 _AAA_TARGET = _AAA_SOLID + 0.2  # headroom so hover/active chroma shifts stay AAA
 _ON_TINT_CHROMA = 0.015  # brand-hue chroma for the dark "chromatic gray" on-color
 
+_STATUS_AA = 4.5  # status solid / text on-color floor (WCAG AA)
+_STATUS_TARGET = _STATUS_AA + 0.2  # headroom for status hover/active chroma shifts
+
 STEP_KEYS: tuple[str, ...] = tuple(f"step-{step}" for step in range(1, 13))
 
 ACCENT_TOKEN_NAMES: tuple[str, ...] = (
@@ -40,6 +44,91 @@ ACCENT_TOKEN_NAMES: tuple[str, ...] = (
     "accent-active",
     "accent-on",
 )
+
+# The four semantic status families. Each carries a fixed canonical OKLCH hue
+# (independent of the brand coordinate) and an explicit on-color polarity, so
+# success/danger/info read as vivid dark solids under white labels while the
+# amber warning stays light under a black label.
+STATUS_FAMILIES: tuple[str, ...] = ("success", "warning", "danger", "info")
+
+
+class _StatusSpec(TypedDict):
+    hue: float
+    chroma: float
+    on: str
+
+
+STATUS_SPECS: dict[str, _StatusSpec] = {
+    "success": {"hue": 152.0, "chroma": 0.120, "on": "white"},
+    "warning": {"hue": 95.0, "chroma": 0.130, "on": "black"},
+    "danger": {"hue": 25.0, "chroma": 0.160, "on": "white"},
+    "info": {"hue": 250.0, "chroma": 0.130, "on": "white"},
+}
+
+# Full global token name set for the status families (solid + interaction +
+# tint coordinates), used by the tests and the exports.
+STATUS_TOKEN_NAMES: tuple[str, ...] = tuple(
+    name
+    for family in STATUS_FAMILIES
+    for name in (
+        family,
+        f"{family}-hover",
+        f"{family}-active",
+        f"{family}-on",
+        f"{family}-subtle",
+        f"{family}-border",
+        f"{family}-text",
+    )
+)
+
+# ---------------------------------------------------------------------------
+# Full 12-step shade scales (Radix 1–12) for the brand and each status family.
+# These are the raw ramps Step 2 of the Atmos article builds — the neutral
+# ``step-1…12`` already existed; brand + status scales are additive.
+# ---------------------------------------------------------------------------
+
+BRAND_SCALE_NAMES: tuple[str, ...] = tuple(f"brand-{step}" for step in range(1, 13))
+
+STATUS_SCALE_NAMES: tuple[str, ...] = tuple(
+    f"{family}-{step}" for family in STATUS_FAMILIES for step in range(1, 13)
+)
+
+# The four solid status coordinates (theme-independent, AA-solved) without the
+# tint helpers — after B1 the tints are derived from scale steps instead.
+STATUS_COORD_NAMES: tuple[str, ...] = tuple(
+    name
+    for family in STATUS_FAMILIES
+    for name in (
+        family,
+        f"{family}-hover",
+        f"{family}-active",
+        f"{family}-on",
+    )
+)
+
+# Adapted step legend: the article's 50–950 guide collapsed onto chroma's 1–12
+# Radix protocol. Each index's intent is documented here, on the preview ramp
+# cells, and in the README Global Tokens table. Source: Atmos Step 2.
+SCALE_STEP_LEGEND: tuple[tuple[int, str], ...] = (
+    (1, "Near-white, subtle background tints — app canvas / surface root"),
+    (2, "Light backgrounds, panels / default surfaces"),
+    (3, "Subtle tints, inputs / form fields"),
+    (4, "Hover surfaces"),
+    (5, "Selected / active surfaces, main brand tone (500)"),
+    (6, "Low-contrast borders, dividers"),
+    (7, "Component boundaries"),
+    (8, "Disabled text, focus outlines"),
+    (9, "Mid ramp · placeholder / muted mid"),
+    (10, "Muted text, metadata / labels"),
+    (11, "Secondary / body text — strong emphasis"),
+    (12, "Primary / headings — near-black, high-contrast text · darkest surfaces"),
+)
+
+# Rebind STATUS_TOKEN_NAMES to the full current status global set (coords + scales).
+# The original 7-token set (including subtle/border/text) is now represented via
+# scale steps; keeping the rebind avoids breaking the public export while the
+# concrete global set expands to brand + status scales.
+STATUS_TOKEN_NAMES = tuple(list(STATUS_COORD_NAMES) + list(STATUS_SCALE_NAMES))  # type: ignore[no-redef]
 
 
 @dataclass(frozen=True)
@@ -51,6 +140,11 @@ class ThemeSpec:
     chroma_controls: tuple[tuple[float, float], ...]
     overlay_lightness: float
     overlay_chroma: float
+    status_subtle_lightness: float
+    status_subtle_chroma: float
+    status_border_lightness: float
+    status_border_chroma: float
+    status_text_lightness: float
 
 
 # Dark theme: step 1 (app background) is darkest, step 12 (text) is lightest.
@@ -74,6 +168,11 @@ DARK = ThemeSpec(
     ),
     overlay_lightness=0.36,
     overlay_chroma=0.014,
+    status_subtle_lightness=0.16,
+    status_subtle_chroma=0.03,
+    status_border_lightness=0.42,
+    status_border_chroma=0.05,
+    status_text_lightness=0.78,
 )
 
 # Light theme: step 1 (app background) is lightest, step 12 (text) is darkest.
@@ -97,6 +196,11 @@ LIGHT = ThemeSpec(
     ),
     overlay_lightness=1.00,
     overlay_chroma=0.0,
+    status_subtle_lightness=0.96,
+    status_subtle_chroma=0.03,
+    status_border_lightness=0.82,
+    status_border_chroma=0.05,
+    status_text_lightness=0.42,
 )
 
 THEMES: dict[str, ThemeSpec] = {theme.name: theme for theme in (DARK, LIGHT)}
@@ -124,6 +228,13 @@ SEMANTIC_TO_GLOBAL: dict[str, str] = {
     "bg-action-hover": "accent-hover",
     "bg-action-active": "accent-active",
 }
+
+for _family in STATUS_FAMILIES:
+    SEMANTIC_TO_GLOBAL[f"bg-{_family}-subtle"] = f"{_family}-2"
+    SEMANTIC_TO_GLOBAL[f"bg-{_family}-strong"] = _family
+    SEMANTIC_TO_GLOBAL[f"border-{_family}"] = f"{_family}-6"
+    SEMANTIC_TO_GLOBAL[f"text-{_family}"] = f"{_family}-11"
+    SEMANTIC_TO_GLOBAL[f"text-on-{_family}"] = f"{_family}-on"
 
 
 def _interp(controls: tuple[tuple[float, float], ...], x: float) -> float:
@@ -153,6 +264,56 @@ def neutral_steps(
     }
 
 
+def _scale_back(theme: ThemeSpec) -> float:
+    """Dark theme chroma scale-back (article Step 6: reduce saturation on dark)."""
+    return 0.9 if theme.name == "dark" else 1.0
+
+
+def color_ramp(
+    theme: ThemeSpec, hue: float, peak_chroma: float, prefix: str
+) -> dict[str, tuple[float, float, float]]:
+    """Generic 12-step chromatic ramp sharing the neutral lightness ladder.
+
+    Chroma peaks mid-scale at ``peak_chroma`` and tapers at the ends; dark
+    theme scales it back ~10% per the article.
+    """
+    back = _scale_back(theme)
+    p = peak_chroma * back
+    chroma_controls: tuple[tuple[float, float], ...] = (
+        (0.00, 0.30 * p),
+        (0.50, p),
+        (1.00, 0.72 * p),
+    )
+    return {
+        f"{prefix}-{step}": (
+            _interp(theme.lightness_controls, (step - 1) / 11.0),
+            _interp(chroma_controls, (step - 1) / 11.0),
+            hue,
+        )
+        for step in range(1, 13)
+    }
+
+
+def brand_scale_steps(
+    theme: ThemeSpec, brand_rgb: tuple[float, float, float]
+) -> dict[str, tuple[float, float, float]]:
+    """12-step brand shade scale (``brand-1…12``) at the brand hue/chroma."""
+    _, peak_chroma, hue = rgb_to_oklch(brand_rgb)
+    # Keep a floor so near-gray brands still produce a visible tint ramp.
+    peak_chroma = max(peak_chroma, 0.01)
+    return color_ramp(theme, hue, peak_chroma, "brand")
+
+
+def status_scale_steps(
+    theme: ThemeSpec,
+) -> dict[str, tuple[float, float, float]]:
+    """12-step shade scale per status family (``{s}-1…12``)."""
+    out: dict[str, tuple[float, float, float]] = {}
+    for family, spec in STATUS_SPECS.items():
+        out.update(color_ramp(theme, spec["hue"], spec["chroma"], family))
+    return out
+
+
 def _normalize_lightness(
     lightness: float,
     chroma: float,
@@ -176,15 +337,9 @@ def _normalize_lightness(
     for _ in range(48):
         mid = (lo + hi) / 2
         if contrast_at(mid) >= target:
-            if on_is_light:
-                hi = mid
-            else:
-                lo = mid
+            lo = mid
         else:
-            if on_is_light:
-                lo = mid
-            else:
-                hi = mid
+            hi = mid
     return (lo + hi) / 2.0
 
 
@@ -284,6 +439,42 @@ def accent_scale(
     }
 
 
+def status_scale(
+    theme: ThemeSpec,
+) -> dict[str, tuple[float, float, float]]:
+    """Build the status family solid coordinates as ``{token: (L, C, H)}``.
+
+    The four status families carry fixed canonical hues — independent of the
+    brand coordinate. The solid (and its hover/active) is theme-independent,
+    like the accent: its lightness is normalized until the on-color label
+    clears WCAG AA. Subtle/border/text are now derived from the 12-step
+    status shade scales (B1), so this helper only emits the 4-token solid set.
+    """
+
+    _ = theme  # theme-independent solids; kept for call-site symmetry
+    tokens: dict[str, tuple[float, float, float]] = {}
+    for family, spec in STATUS_SPECS.items():
+        hue = spec["hue"]
+        chroma = spec["chroma"]
+        on_rgb = (1.0, 1.0, 1.0) if spec["on"] == "white" else (0.0, 0.0, 0.0)
+        solid_lightness = _normalize_lightness(
+            0.60, chroma, hue, on_rgb, _STATUS_TARGET
+        )
+        tokens[family] = (solid_lightness, chroma, hue)
+        tokens[f"{family}-hover"] = (
+            solid_lightness,
+            min(chroma * 1.10, 0.30),
+            hue,
+        )
+        tokens[f"{family}-active"] = (
+            solid_lightness,
+            max(chroma * 0.90, 0.0),
+            hue,
+        )
+        tokens[f"{family}-on"] = rgb_to_oklch(on_rgb)
+    return tokens
+
+
 def build_layers(
     hex_value: str, preserve_vibrancy: bool = False
 ) -> dict[str, dict[str, dict[str, str]]]:
@@ -293,7 +484,8 @@ def build_layers(
     ``global`` / ``semantic``. All neutral tokens carry the locked brand hue
     (chromatic grays); the accent is the brand color normalized to clear WCAG
     AAA against its on-color label (or, with ``preserve_vibrancy``, locked to
-    the brand with the on-color solved instead).
+    the brand with the on-color solved instead). The four status families
+    carry their canonical hues with AA-guaranteed on-colors.
     """
     brand = parse_hex(hex_value)
     _, _, hue = rgb_to_oklch(brand)
@@ -304,6 +496,9 @@ def build_layers(
             for name, oklch in {
                 **neutral_steps(theme, hue),
                 **accent_scale(brand, preserve_vibrancy=preserve_vibrancy),
+                **brand_scale_steps(theme, brand),
+                **status_scale(theme),
+                **status_scale_steps(theme),
             }.items()
         }
         semantic = {
@@ -325,8 +520,9 @@ def verify_contrast(
     """Report the WCAG contrast of every structural text/background pairing.
 
     The returned map mirrors ``layers`` (``theme -> pairing -> ratio``) for the
-    pairings the system guarantees: ``text-*`` on every ``bg-surface-*`` and
-    the accent on-color label against every action state.
+    pairings the system guarantees: ``text-*`` on every ``bg-surface-*``, the
+    accent on-color label against every action state, and the status text and
+    on-color labels against their expected surfaces (WCAG AA).
     """
     surfaces = (
         "bg-surface-root",
@@ -340,6 +536,7 @@ def verify_contrast(
     report: dict[str, dict[str, float]] = {}
     for theme_name, theme in layers.items():
         semantic = theme["semantic"]
+        global_tokens = theme["global"]
         report[theme_name] = {}
         for surface in surfaces:
             for text in texts:
@@ -350,4 +547,15 @@ def verify_contrast(
             report[theme_name][f"text-on-accent/{state}"] = contrast_ratio(
                 parse_hex(semantic["text-on-accent"]), parse_hex(semantic[state])
             )
+        for family in STATUS_FAMILIES:
+            for state in (family, f"{family}-hover", f"{family}-active"):
+                report[theme_name][f"text-on-{family}/{state}"] = contrast_ratio(
+                    parse_hex(semantic[f"text-on-{family}"]),
+                    parse_hex(global_tokens[state]),
+                )
+            for surface in surfaces:
+                report[theme_name][f"text-{family}/{surface}"] = contrast_ratio(
+                    parse_hex(semantic[f"text-{family}"]),
+                    parse_hex(semantic[surface]),
+                )
     return report

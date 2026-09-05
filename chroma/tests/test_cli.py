@@ -79,6 +79,25 @@ class TestCLI(unittest.TestCase):
             self.assertIn(".dark {", css)
             self.assertIn("--bg-surface-overlay: #ffffff;", css)
 
+    def test_tailwind_status_groups(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main(["6366f1"])
+        self.assertEqual(code, 0)
+        text = out.getvalue()
+        self.assertIn("--color-surface-success-subtle: var(--bg-success-subtle);", text)
+        self.assertIn("--color-foreground-danger: var(--text-danger);", text)
+        self.assertIn("--color-border-warning: var(--border-warning);", text)
+        self.assertIn("--color-on-info: var(--text-on-info);", text)
+
+    def test_preserve_vibrancy_reports_status_on_colors(self):
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = main(["00ffff", "--preserve-vibrancy", "-f", "json"])
+        self.assertEqual(code, 0)
+        self.assertIn("text-on-success/success", err.getvalue())
+        self.assertIn("text-on-danger/danger", err.getvalue())
+
     def test_tailwind_v3_config_and_companion(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "tailwind.config.js"

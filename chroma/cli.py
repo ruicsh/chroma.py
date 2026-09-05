@@ -18,7 +18,7 @@ from chroma.serializers import (
     emit_tailwind,
     emit_tailwind_v3,
 )
-from chroma.tokens import build_layers, verify_contrast
+from chroma.tokens import STATUS_FAMILIES, build_layers, verify_contrast
 
 
 def _report_accent(
@@ -49,6 +49,14 @@ def _report_accent(
                 f"chroma: [{theme_name}] {pairing}: {ratio:.2f}:1",
                 file=sys.stderr,
             )
+        for family in STATUS_FAMILIES:
+            for state in (family, f"{family}-hover", f"{family}-active"):
+                pairing = f"text-on-{family}/{state}"
+                ratio = pairings[pairing]
+                print(
+                    f"chroma: [{theme_name}] {pairing}: {ratio:.2f}:1",
+                    file=sys.stderr,
+                )
 
 
 def main(argv: list[str] | None = None) -> int:

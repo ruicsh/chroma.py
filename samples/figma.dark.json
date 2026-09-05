@@ -48,6 +48,54 @@
         "$type": "color",
         "$description": "primary button pressed"
       }
+    },
+    "success": {
+      "subtle": {
+        "$value": "#011808",
+        "$type": "color",
+        "$description": "success tinted surfaces (alerts, badges)"
+      },
+      "strong": {
+        "$value": "#2c834b",
+        "$type": "color",
+        "$description": "success solid fills"
+      }
+    },
+    "warning": {
+      "subtle": {
+        "$value": "#1a1200",
+        "$type": "color",
+        "$description": "warning tinted surfaces (alerts, badges)"
+      },
+      "strong": {
+        "$value": "#997e00",
+        "$type": "color",
+        "$description": "warning solid fills"
+      }
+    },
+    "danger": {
+      "subtle": {
+        "$value": "#280405",
+        "$type": "color",
+        "$description": "danger tinted surfaces (alerts, badges)"
+      },
+      "strong": {
+        "$value": "#c64a46",
+        "$type": "color",
+        "$description": "danger solid fills"
+      }
+    },
+    "info": {
+      "subtle": {
+        "$value": "#011328",
+        "$type": "color",
+        "$description": "info tinted surfaces (alerts, badges)"
+      },
+      "strong": {
+        "$value": "#2c77bc",
+        "$type": "color",
+        "$description": "info solid fills"
+      }
     }
   },
   "border": {
@@ -65,6 +113,26 @@
       "$value": "#545663",
       "$type": "color",
       "$description": "focus rings & active input outlines"
+    },
+    "success": {
+      "$value": "#004116",
+      "$type": "color",
+      "$description": "success tinted borders"
+    },
+    "warning": {
+      "$value": "#453000",
+      "$type": "color",
+      "$description": "warning tinted borders"
+    },
+    "danger": {
+      "$value": "#680009",
+      "$type": "color",
+      "$description": "danger tinted borders"
+    },
+    "info": {
+      "$value": "#003468",
+      "$type": "color",
+      "$description": "info tinted borders"
     }
   },
   "text": {
@@ -93,7 +161,47 @@
         "$value": "#000000",
         "$type": "color",
         "$description": "label/glyph on accent surfaces"
+      },
+      "success": {
+        "$value": "#ffffff",
+        "$type": "color",
+        "$description": "label/glyph on success surfaces"
+      },
+      "warning": {
+        "$value": "#000000",
+        "$type": "color",
+        "$description": "label/glyph on warning surfaces"
+      },
+      "danger": {
+        "$value": "#ffffff",
+        "$type": "color",
+        "$description": "label/glyph on danger surfaces"
+      },
+      "info": {
+        "$value": "#ffffff",
+        "$type": "color",
+        "$description": "label/glyph on info surfaces"
       }
+    },
+    "success": {
+      "$value": "#a8e1b6",
+      "$type": "color",
+      "$description": "success text on default surfaces"
+    },
+    "warning": {
+      "$value": "#e3d08c",
+      "$type": "color",
+      "$description": "warning text on default surfaces"
+    },
+    "danger": {
+      "$value": "#ffb4ac",
+      "$type": "color",
+      "$description": "danger text on default surfaces"
+    },
+    "info": {
+      "$value": "#a3d6ff",
+      "$type": "color",
+      "$description": "info text on default surfaces"
     }
   }
 }
