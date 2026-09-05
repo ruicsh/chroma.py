@@ -340,11 +340,43 @@ make check
 
 ---
 
+## Installation
+
+Requires Python >= 3.10.
+
+```bash
+git clone <repo-url> chroma.py
+cd chroma.py
+```
+
+**Development setup (recommended)** — installs the editable package plus the
+dev toolchain (ruff, pyright) and unlocks `make check`:
+
+```bash
+uv sync
+```
+
+**Tool-only install** — installs just the `chroma` console script:
+
+```bash
+pip install .
+```
+
+### Run
+
+```bash
+uv run chroma 6366f1   # dev setup
+chroma 6366f1          # pip install
+./chroma.sh 6366f1     # launcher (uses the venv from `uv sync`)
+```
+
+---
+
 ## Usage
 
 ```bash
-make run              # python3 -m chroma 6366f1 (default brand)
-make run 10b981       # python3 -m chroma 10b981
+make run              # uv run python -m chroma 6366f1 (default brand)
+make run 10b981       # uv run python -m chroma 10b981
 ```
 
 Or directly:
@@ -402,7 +434,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (69 test cases and counting).
+All tests pass (73 test cases and counting).
 
 ---
 
