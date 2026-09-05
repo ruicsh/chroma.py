@@ -3,3 +3,4 @@ SPEC.md
 tasks/
 __pycache__/
 .venv/
+theme.css

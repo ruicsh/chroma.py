@@ -43,25 +43,25 @@ The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chr
 
 ### 2. Semantic Tokens (functional intent → global)
 
-| Atmos semantic token | Resolves to      | Functional intent                                   |
-| :------------------- | :--------------- | :-------------------------------------------------- |
-| `bg-surface-root`    | `step-1`         | App canvas background / window                      |
-| `bg-surface-default` | `step-2`         | Primary layout panels and content cards             |
-| `bg-surface-subtle`  | `step-3`         | Form inputs, table cells, inactive text areas       |
-| `bg-surface-hover`   | `step-4`         | High-velocity grid row hover states                 |
-| `bg-surface-active`  | `step-5`         | Selected items, active navigation tabs              |
-| `bg-surface-overlay` | *(dedicated)*    | Floating layers: popovers, dropdowns, modals        |
-| `border-subtle`      | `step-6`         | Low-contrast grid-line cell dividers                |
-| `border-default`     | `step-7`         | Structural component boundary lines                 |
-| `border-strong`      | `step-8`         | Focus states and active input outline rings         |
-| `text-disabled`      | `step-8`         | Recessed inactive parameters (matches input borders)|
-| `text-muted`         | `step-10`        | Metadata, labels, table headers                     |
-| `text-secondary`     | `step-11`        | Standard body text and descriptive data             |
-| `text-primary`       | `step-12`        | Critical numeric data cells and main titles         |
-| `text-on-accent`     | `accent-on`      | Label/glyph color rendered on accent surfaces       |
-| `bg-action-primary`  | `accent`         | Primary brand buttons and execution triggers        |
-| `bg-action-hover`    | `accent-hover`   | Hover states for primary interaction buttons        |
-| `bg-action-active`   | `accent-active`  | Pressed state for primary interaction buttons       |
+| Atmos semantic token | Resolves to     | Functional intent                                    |
+| :------------------- | :-------------- | :--------------------------------------------------- |
+| `bg-surface-root`    | `step-1`        | App canvas background / window                       |
+| `bg-surface-default` | `step-2`        | Primary layout panels and content cards              |
+| `bg-surface-subtle`  | `step-3`        | Form inputs, table cells, inactive text areas        |
+| `bg-surface-hover`   | `step-4`        | High-velocity grid row hover states                  |
+| `bg-surface-active`  | `step-5`        | Selected items, active navigation tabs               |
+| `bg-surface-overlay` | _(dedicated)_   | Floating layers: popovers, dropdowns, modals         |
+| `border-subtle`      | `step-6`        | Low-contrast grid-line cell dividers                 |
+| `border-default`     | `step-7`        | Structural component boundary lines                  |
+| `border-strong`      | `step-8`        | Focus states and active input outline rings          |
+| `text-disabled`      | `step-8`        | Recessed inactive parameters (matches input borders) |
+| `text-muted`         | `step-10`       | Metadata, labels, table headers                      |
+| `text-secondary`     | `step-11`       | Standard body text and descriptive data              |
+| `text-primary`       | `step-12`       | Critical numeric data cells and main titles          |
+| `text-on-accent`     | `accent-on`     | Label/glyph color rendered on accent surfaces        |
+| `bg-action-primary`  | `accent`        | Primary brand buttons and execution triggers         |
+| `bg-action-hover`    | `accent-hover`  | Hover states for primary interaction buttons         |
+| `bg-action-active`   | `accent-active` | Pressed state for primary interaction buttons        |
 
 The brand accent is **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until its on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white. Hover/active vary **chroma** at the same lightness, so the AAA guarantee holds across interaction states. Actions reference the **brand accent**, not a neutral gray — neutral buttons blend into layout containers, while the brand coordinate acts as an unmistakable execution beacon.
 
@@ -69,20 +69,20 @@ The brand accent is **normalized**: its lightness is shifted (perceptually, hue/
 
 Component aliases are **not generated** by `chroma` — the CSS ships only the global ramps and semantic intent, so your theme file stays small and focused. Instead, apply component mappings directly in your layout code, deriving them from semantic utilities:
 
-| Component token          | Derived from       |
-| :----------------------- | :----------------- |
-| `bg-grid-header`         | `bg-surface-subtle` |
-| `bg-grid-row-hover`      | `bg-surface-hover`  |
-| `bg-grid-row-selected`   | `bg-surface-active` |
-| `border-grid-cell`       | `border-border-subtle` |
-| `text-grid-value`        | `text-foreground-primary` |
-| `bg-input-field`         | `bg-surface-subtle` |
-| `border-input-default`   | `border-border-default` |
-| `border-input-focus`     | `border-border-strong` |
+| Component token          | Derived from               |
+| :----------------------- | :------------------------- |
+| `bg-grid-header`         | `bg-surface-subtle`        |
+| `bg-grid-row-hover`      | `bg-surface-hover`         |
+| `bg-grid-row-selected`   | `bg-surface-active`        |
+| `border-grid-cell`       | `border-border-subtle`     |
+| `text-grid-value`        | `text-foreground-primary`  |
+| `bg-input-field`         | `bg-surface-subtle`        |
+| `border-input-default`   | `border-border-default`    |
+| `border-input-focus`     | `border-border-strong`     |
 | `text-input-placeholder` | `text-foreground-disabled` |
-| `bg-btn-primary-default` | `bg-action-primary` |
-| `bg-btn-primary-hover`   | `bg-action-hover`   |
-| `text-btn-primary-glyph` | `text-on-accent`    |
+| `bg-btn-primary-default` | `bg-action-primary`        |
+| `bg-btn-primary-hover`   | `bg-action-hover`          |
+| `text-btn-primary-glyph` | `text-on-accent`           |
 
 In React, that is a local style map or utility alias:
 
@@ -151,17 +151,17 @@ options:
 
 The global ramps are emitted as **hex** (maximum browser compatibility); the semantic tokens chain through CSS custom properties (`--bg-surface-root: var(--step-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the four core semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names:
 
-| Token group | Utility example                |
-| :---------- | :----------------------------- |
-| `surface`   | `bg-surface-root`              |
-| `foreground`| `text-foreground-primary` (never `text-text-primary`) |
-| `border`    | `border-border-subtle` *(the one accepted double prefix)* |
-| `action`    | `bg-action-primary`            |
-| `on`        | `text-on-accent`               |
+| Token group  | Utility example                                           |
+| :----------- | :-------------------------------------------------------- |
+| `surface`    | `bg-surface-root`                                         |
+| `foreground` | `text-foreground-primary` (never `text-text-primary`)     |
+| `border`     | `border-border-subtle` _(the one accepted double prefix)_ |
+| `action`     | `bg-action-primary`                                       |
+| `on`         | `text-on-accent`                                          |
 
-### Generated v4 stylesheet (trimmed)
+### Default output
 
-`python3 -m chroma 6366f1` produces a self-contained Tailwind v4 stylesheet in exactly this shape:
+`python3 -m chroma 6366f1` emits the full self-contained Tailwind v4 stylesheet below:
 
 ```css
 /* Generated by chroma.py v1.0.0 — semantic theme tokens. */
@@ -171,44 +171,108 @@ The global ramps are emitted as **hex** (maximum browser compatibility); the sem
 
 @theme inline {
   /* Core Semantic Layout Layer */
-  --color-surface-root: var(--bg-surface-root);
-  --color-surface-default: var(--bg-surface-default);
-  /* … surface-subtle, hover, active, overlay … */
-
+  --color-surface-root: var(--bg-surface-root);  /* bg-surface-root */
+  --color-surface-default: var(--bg-surface-default);  /* bg-surface-default */
+  --color-surface-subtle: var(--bg-surface-subtle);  /* bg-surface-subtle */
+  --color-surface-hover: var(--bg-surface-hover);  /* bg-surface-hover */
+  --color-surface-active: var(--bg-surface-active);  /* bg-surface-active */
+  --color-surface-overlay: var(--bg-surface-overlay);  /* bg-surface-overlay */
   /* Core Semantic Typography Layer */
-  --color-foreground-primary: var(--text-primary);
-  /* … secondary, muted, disabled … */
-
+  --color-foreground-primary: var(--text-primary);  /* text-foreground-primary */
+  --color-foreground-secondary: var(--text-secondary);  /* text-foreground-secondary */
+  --color-foreground-muted: var(--text-muted);  /* text-foreground-muted */
+  --color-foreground-disabled: var(--text-disabled);  /* text-foreground-disabled */
   /* Core Semantic Boundary Layer */
-  --color-border-subtle: var(--border-subtle);
-  /* … default, strong … */
-
+  --color-border-subtle: var(--border-subtle);  /* border-border-subtle */
+  --color-border-default: var(--border-default);  /* border-border-default */
+  --color-border-strong: var(--border-strong);  /* border-border-strong */
   /* Core High-Impact Action Layer */
-  --color-on-accent: var(--text-on-accent);
-  --color-action-primary: var(--bg-action-primary);
-  /* … hover, active … */
+  --color-on-accent: var(--text-on-accent);  /* text-on-accent */
+  --color-action-primary: var(--bg-action-primary);  /* bg-action-primary */
+  --color-action-hover: var(--bg-action-hover);  /* bg-action-hover */
+  --color-action-active: var(--bg-action-active);  /* bg-action-active */
 }
 
 :root {
   /* The 12-Step Mathematical Gray Ramp */
   --step-1: #fbfcfe;
-  /* … step-2 … step-12 … */
+  --step-2: #f7f8fc;
+  --step-3: #f4f5f9;
+  --step-4: #f1f2f7;
+  --step-5: #eff0f5;
+  --step-6: #e9eaf0;
+  --step-7: #dddee4;
+  --step-8: #cacbd1;
+  --step-9: #9c9ea4;
+  --step-10: #717279;
+  --step-11: #2d2e34;
+  --step-12: #05050a;
 
   /* The 10% High-Velocity Accent Coordinates */
-  --accent: #d7e8ff;
-  /* … accent-hover, accent-active, accent-on … */
+  --accent: #d7e8ff;  /* brand accent (AAA-normalized) */
+  --accent-hover: #d5e6ff;  /* accent hover */
+  --accent-active: #daebff;  /* accent pressed */
+  --accent-on: #000000;  /* auto on-color for accent */
 
   /* Semantic Structural Mapping Matrix */
-  --bg-surface-root: var(--step-1);
-  /* … bg-surface-default … bg-action-active … */
-  --bg-surface-overlay: #ffffff;
+  --bg-surface-root: var(--step-1);  /* app canvas background */
+  --bg-surface-default: var(--step-2);  /* layout panels & content cards */
+  --bg-surface-subtle: var(--step-3);  /* form inputs, table cells, alt rows */
+  --bg-surface-hover: var(--step-4);  /* grid row hover states */
+  --bg-surface-active: var(--step-5);  /* selected items, active nav tabs */
+  --border-subtle: var(--step-6);  /* grid-line cell dividers */
+  --border-default: var(--step-7);  /* component boundary lines */
+  --border-strong: var(--step-8);  /* focus rings & active input outlines */
+  --text-disabled: var(--step-8);  /* recessed inactive parameters */
+  --text-muted: var(--step-10);  /* metadata, labels, table headers */
+  --text-secondary: var(--step-11);  /* body text & descriptive data */
+  --text-primary: var(--step-12);  /* critical numbers & main titles */
+  --text-on-accent: var(--accent-on);  /* label/glyph on accent surfaces */
+  --bg-action-primary: var(--accent);  /* primary brand buttons */
+  --bg-action-hover: var(--accent-hover);  /* primary button hover */
+  --bg-action-active: var(--accent-active);  /* primary button pressed */
+  --bg-surface-overlay: #ffffff;  /* popovers, dropdowns, modals */
 }
 
 .dark {
-  /* The 12-Step Dark Chromatic Gray Ramp */
+  /* The 12-Step Mathematical Gray Ramp */
   --step-1: #0c0d12;
-  /* … same shape, dark values … */
-  --bg-surface-overlay: #3b3d45;
+  --step-2: #111218;
+  --step-3: #17181e;
+  --step-4: #1c1e25;
+  --step-5: #22242c;
+  --step-6: #31333d;
+  --step-7: #3f414c;
+  --step-8: #545663;
+  --step-9: #797b89;
+  --step-10: #a0a3b3;
+  --step-11: #cccfe1;
+  --step-12: #eff2ff;
+
+  /* The 10% High-Velocity Accent Coordinates */
+  --accent: #d7e8ff;  /* brand accent (AAA-normalized) */
+  --accent-hover: #d5e6ff;  /* accent hover */
+  --accent-active: #daebff;  /* accent pressed */
+  --accent-on: #000000;  /* auto on-color for accent */
+
+  /* Semantic Structural Mapping Matrix */
+  --bg-surface-root: var(--step-1);  /* app canvas background */
+  --bg-surface-default: var(--step-2);  /* layout panels & content cards */
+  --bg-surface-subtle: var(--step-3);  /* form inputs, table cells, alt rows */
+  --bg-surface-hover: var(--step-4);  /* grid row hover states */
+  --bg-surface-active: var(--step-5);  /* selected items, active nav tabs */
+  --border-subtle: var(--step-6);  /* grid-line cell dividers */
+  --border-default: var(--step-7);  /* component boundary lines */
+  --border-strong: var(--step-8);  /* focus rings & active input outlines */
+  --text-disabled: var(--step-8);  /* recessed inactive parameters */
+  --text-muted: var(--step-10);  /* metadata, labels, table headers */
+  --text-secondary: var(--step-11);  /* body text & descriptive data */
+  --text-primary: var(--step-12);  /* critical numbers & main titles */
+  --text-on-accent: var(--accent-on);  /* label/glyph on accent surfaces */
+  --bg-action-primary: var(--accent);  /* primary brand buttons */
+  --bg-action-hover: var(--accent-hover);  /* primary button hover */
+  --bg-action-active: var(--accent-active);  /* primary button pressed */
+  --bg-surface-overlay: #3b3d45;  /* popovers, dropdowns, modals */
 }
 ```
 
