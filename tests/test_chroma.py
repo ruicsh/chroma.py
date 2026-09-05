@@ -1,5 +1,6 @@
 """Tests for the chroma.py color engine (OKLCH conversion + WCAG math)."""
 
+import json
 import math
 
 import pytest
@@ -224,3 +225,79 @@ def test_intent_preserves_brand_hue_and_is_vivid():
 
 def test_generation_is_deterministic():
     assert chroma.build_themes("6366f1") == chroma.build_themes("6366f1")
+
+
+# ---------------------------------------------------------------------------
+# CLI + serializers
+# ---------------------------------------------------------------------------
+
+
+def test_cli_json_to_stdout(capsys):
+    assert chroma.main(["6366f1", "-f", "json"]) == 0
+    out = capsys.readouterr().out
+    payload = json.loads(out)
+    assert payload["meta"]["input"] == "6366f1"
+    assert set(payload["meta"]["themes"]) == {"light", "dark"}
+    for theme in ("light", "dark"):
+        assert "surface-root" in payload[theme]
+        assert "intent-primary" in payload[theme]
+
+
+def test_cli_json_to_file(tmp_path, capsys):
+    target = tmp_path / "branding-tokens.json"
+    assert chroma.main(["10b981", "-f", "json", "-o", str(target)]) == 0
+    payload = json.loads(target.read_text())
+    assert payload["light"]["intent-primary"] == "#10b981"
+    assert "wrote" in capsys.readouterr().err
+
+
+def test_cli_tailwind_default_is_v4_css(capsys):
+    assert chroma.main(["6366f1"]) == 0
+    out = capsys.readouterr().out
+    assert "@import 'tailwindcss';" in out
+    assert "@theme inline" in out
+    assert "@custom-variant dark" in out
+    assert ".dark {" in out
+
+
+def test_cli_tailwind_v4_css_file(tmp_path):
+    target = tmp_path / "theme.css"
+    assert chroma.main(["6366f1", "-o", str(target)]) == 0
+    css = target.read_text()
+    assert "@theme inline" in css
+    assert "--color-surface-root: var(--surface-root);" in css
+    assert ":root {" in css and ".dark {" in css
+
+
+def test_cli_tailwind_v3_config_and_companion(tmp_path):
+    target = tmp_path / "tailwind.config.js"
+    assert chroma.main(["6366f1", "-o", str(target)]) == 0
+    config = target.read_text()
+    companion = target.with_suffix(".css")
+    assert companion.exists()
+    css = companion.read_text()
+    assert "module.exports" in config
+    assert "darkMode: 'class'" in config
+    assert "surface: { root: 'var(--surface-root)'" in config
+    assert "intent: { primary: 'var(--intent-primary)'" in config
+    assert ":root {" in css and ".dark {" in css
+    assert "--intent-primary: #d7e8ff;" in css
+
+
+def test_cli_tailwind_unknown_extension_becomes_v3(tmp_path):
+    target = tmp_path / "branding"  # no extension
+    assert chroma.main(["6366f1", "-o", str(target)]) == 0
+    assert (tmp_path / "branding.js").exists()
+    assert (tmp_path / "branding.css").exists()
+
+
+def test_cli_invalid_hex_exits_2(capsys):
+    assert chroma.main(["notacolor"]) == 2
+    assert "error" in capsys.readouterr().err.lower()
+
+
+def test_cli_help(capsys):
+    with pytest.raises(SystemExit) as exc:
+        chroma.main(["--help"])
+    assert exc.value.code == 0
+    assert "usage:" in capsys.readouterr().out
