@@ -100,43 +100,7 @@ Keeping these aliases in the code layer means a single component's styling can e
 
 ---
 
-## Usage
-
-```bash
-make run              # python3 -m chroma 6366f1 (default brand)
-make run 10b981       # python3 -m chroma 10b981
-```
-
-Or directly:
-
-```bash
-python3 -m chroma 6366f1 -o tailwind.config.js
-```
-
-Or via the launcher (uses the project venv):
-
-```bash
-./chroma.sh 6366f1 --format json
-```
-
-### CLI reference
-
-```bash
-usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind}] hex
-
-Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
-from one brand color hex.
-
-positional arguments:
-  hex                   The primary brand hex code to extract hue coordinate
-                        from (e.g. 6366f1)
-
-options:
-  -h, --help            show this help message and exit
-  -o, --output OUTPUT   Output file path instead of writing to stdout
-  -f, --format {json,tailwind}
-                        The configuration file target standard (Default: tailwind)
-```
+## Output
 
 ### Tailwind output resolution
 
@@ -289,6 +253,46 @@ python3 -m chroma 10b981 --format json --output branding-tokens.json
 ```
 
 The `json` document has the shape `{ "meta": …, "global": {theme: {token: hex}}, "semantic": …, "oklch": {layer: {theme: {token: "L C H"}}} }`.
+
+---
+
+## Usage
+
+```bash
+make run              # python3 -m chroma 6366f1 (default brand)
+make run 10b981       # python3 -m chroma 10b981
+```
+
+Or directly:
+
+```bash
+python3 -m chroma 6366f1 -o tailwind.config.js
+```
+
+Or via the launcher (uses the project venv):
+
+```bash
+./chroma.sh 6366f1 --format json
+```
+
+### CLI reference
+
+```bash
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind}] hex
+
+Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
+from one brand color hex.
+
+positional arguments:
+  hex                   The primary brand hex code to extract hue coordinate
+                        from (e.g. 6366f1)
+
+options:
+  -h, --help            show this help message and exit
+  -o, --output OUTPUT   Output file path instead of writing to stdout
+  -f, --format {json,tailwind}
+                        The configuration file target standard (Default: tailwind)
+```
 
 ---
 
