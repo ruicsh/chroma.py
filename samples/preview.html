@@ -689,7 +689,7 @@ function renderMatrix(elId, rows) {
   el.innerHTML = rows.map(([token, ref, use]) => `
   <div class="row">
     <div class="chip" style="background: var(--${token});"></div>
-    <div class="labels"><b>${token}</b><span>${use}</span></div>
+    <div class="labels"><b>${token}</b><span>${use}</span><code style="display:inline-block;margin-top:3px;background:var(--bg-surface-subtle);border:1px solid var(--border-subtle);border-radius:4px;padding:0 5px;font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;word-break:break-all;cursor:pointer;" title="click to copy" onclick="navigator.clipboard.writeText('var(--${token})')">var(--${token})</code></div>
     <div class="arrow">→ ${ref}</div>
   </div>`).join('');
 }
