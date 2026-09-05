@@ -119,6 +119,16 @@ python3 -m chroma 6366f1 --format dtcg -o theme.dtcg.json
 
 All three targets emit only the **semantic tokens** (plus, for `css`, the global ramps its `var()` chain depends on).
 
+### Figma Variables (`--format figma`)
+
+A pair of W3C DTCG JSON documents built for Figma's **native** Variables import — no plugin needed. Figma's "Import into Variables" creates one mode per dropped file, so `-o theme.json` writes `theme.light.json` and `theme.dark.json`; drop them together into the Variables view and they become a single collection with **Light** and **Dark** modes. Both files carry the same semantic token tree (so variables are created for every token) with each theme's resolved hex values, forcing designers to design within the architectural color tokens:
+
+```bash
+python3 -m chroma 6366f1 --format figma -o theme.json
+```
+
+Without `-o`, the light mode reaches stdout (the dark mode is noted on stderr). Every token leaf carries `$type`, `$value` and `$description`.
+
 ### Sass variables (`--format sass`)
 
 A SCSS partial with a nested Sass map keyed by theme. `$chroma-theme` holds the global ramps + accent and the semantic tokens under `light` / `dark`, all in concrete hex — so any Sass toolchain can consume the theme in one `@use`:
@@ -149,17 +159,18 @@ All three preprocessor targets emit **both** tiers (global ramps + accent, then 
 
 Committed sample outputs for every format, generated from the `6366f1` brand. Regenerate them with `make samples`:
 
-| Format          | Command                                   | Sample                                               |
-| :-------------- | :---------------------------------------- | :--------------------------------------------------- |
-| `tailwind` (v4) | `python3 -m chroma 6366f1`                | [`samples/tailwind-v4.css`](samples/tailwind-v4.css) |
-| `tailwind-v3`   | `python3 -m chroma 6366f1 -f tailwind-v3` | [`samples/tailwind-v3.js`](samples/tailwind-v3.js)   |
-| `css`           | `python3 -m chroma 6366f1 -f css`         | [`samples/theme.css`](samples/theme.css)             |
-| `ts`            | `python3 -m chroma 6366f1 -f ts`          | [`samples/theme.ts`](samples/theme.ts)               |
-| `dtcg`          | `python3 -m chroma 6366f1 -f dtcg`        | [`samples/theme.dtcg.json`](samples/theme.dtcg.json) |
-| `json`          | `python3 -m chroma 6366f1 -f json`        | [`samples/tokens.json`](samples/tokens.json)         |
-| `sass`          | `python3 -m chroma 6366f1 -f sass`        | [`samples/theme.scss`](samples/theme.scss)           |
-| `less`          | `python3 -m chroma 6366f1 -f less`        | [`samples/theme.less`](samples/theme.less)           |
-| `stylus`        | `python3 -m chroma 6366f1 -f stylus`      | [`samples/theme.styl`](samples/theme.styl)           |
+| Format          | Command                                                   | Sample                                                                                                        |
+| :-------------- | :-------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------ |
+| `tailwind` (v4) | `python3 -m chroma 6366f1`                                | [`samples/tailwind-v4.css`](samples/tailwind-v4.css)                                                          |
+| `tailwind-v3`   | `python3 -m chroma 6366f1 -f tailwind-v3`                 | [`samples/tailwind-v3.js`](samples/tailwind-v3.js)                                                            |
+| `css`           | `python3 -m chroma 6366f1 -f css`                         | [`samples/theme.css`](samples/theme.css)                                                                      |
+| `ts`            | `python3 -m chroma 6366f1 -f ts`                          | [`samples/theme.ts`](samples/theme.ts)                                                                        |
+| `dtcg`          | `python3 -m chroma 6366f1 -f dtcg`                        | [`samples/theme.dtcg.json`](samples/theme.dtcg.json)                                                          |
+| `figma`         | `python3 -m chroma 6366f1 -f figma -o samples/figma.json` | [`samples/figma.light.json`](samples/figma.light.json) + [`samples/figma.dark.json`](samples/figma.dark.json) |
+| `json`          | `python3 -m chroma 6366f1 -f json`                        | [`samples/tokens.json`](samples/tokens.json)                                                                  |
+| `sass`          | `python3 -m chroma 6366f1 -f sass`                        | [`samples/theme.scss`](samples/theme.scss)                                                                    |
+| `less`          | `python3 -m chroma 6366f1 -f less`                        | [`samples/theme.less`](samples/theme.less)                                                                    |
+| `stylus`        | `python3 -m chroma 6366f1 -f stylus`                      | [`samples/theme.styl`](samples/theme.styl)                                                                    |
 
 A sync test in the suite asserts every committed sample byte-matches fresh output, so the samples can never drift from the code.
 
@@ -319,7 +330,7 @@ The system ships a test suite that enforces its own contract:
 - **Taxonomy integrity:** every semantic token resolves to its exact global source.
 - **WCAG AAA:** `text-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
-- **Multi-format output:** `css` (vanilla), `ts` (as-const module), `dtcg` (W3C), `sass`/`less`/`stylus` (native preprocessor maps) targets are covered by the suite, with committed samples kept byte-identical via a sync test.
+- **Multi-format output:** `css` (vanilla), `ts` (as-const module), `dtcg` (W3C), `figma` (native Figma Variables import), `sass`/`less`/`stylus` (native preprocessor maps) targets are covered by the suite, with committed samples kept byte-identical via a sync test.
 
 The full quality gate — lint (`ruff`), formatting (`ruff format`), type checking (`pyright`) and tests (`unittest`) — runs via:
 
@@ -357,7 +368,7 @@ python3 -m chroma 00ffff --preserve-vibrancy
 ### CLI reference
 
 ```bash
-usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg,sass,less,stylus}] [--preserve-vibrancy] hex
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg,figma,sass,less,stylus}] [--preserve-vibrancy] hex
 
 Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
 from one brand color hex.
@@ -369,7 +380,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -o, --output OUTPUT   Output file path instead of writing to stdout
-  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg,sass,less,stylus}
+  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg,figma,sass,less,stylus}
                         The configuration file target standard (Default: tailwind)
   --preserve-vibrancy   Lock the brand accent exactly and solve the on-color
                         label for AAA instead of shifting accent lightness
