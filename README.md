@@ -65,6 +65,8 @@ The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chr
 
 The brand accent is **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until its on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white. Hover/active vary **chroma** at the same lightness, so the AAA guarantee holds across interaction states. Actions reference the **brand accent**, not a neutral gray — neutral buttons blend into layout containers, while the brand coordinate acts as an unmistakable execution beacon.
 
+With `--preserve-vibrancy`, the accent is instead **locked exactly** to the marketing spec: no lightness shift. Bright neon accents get an ultra-dark **chromatic gray** on-color (brand hue, restrained chroma, the lightest shade that still clears AAA) so the brand identity stays loud while text stays readable; dark accents keep white. The CLI reports the achieved `text-on-accent` ratio against every action state on stderr so you can verify the boundary. Mid-bright brands (where no on-color can clear AAA without shifting lightness) fall back to normalization with a stderr warning.
+
 ### Component tokens (code layer)
 
 Component aliases are **not generated** by `chroma` — the CSS ships only the global ramps and semantic intent, so your theme file stays small and focused. Instead, apply component mappings directly in your layout code, deriving them from semantic utilities:
@@ -308,10 +310,16 @@ Or via the launcher (uses the project venv):
 ./chroma.sh 6366f1 --format json
 ```
 
+Lock a bright neon accent exactly as specified and solve the on-color label instead of shifting lightness:
+
+```bash
+python3 -m chroma 00ffff --preserve-vibrancy
+```
+
 ### CLI reference
 
 ```bash
-usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind}] hex
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind}] [--preserve-vibrancy] hex
 
 Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
 from one brand color hex.
@@ -325,6 +333,10 @@ options:
   -o, --output OUTPUT   Output file path instead of writing to stdout
   -f, --format {json,tailwind}
                         The configuration file target standard (Default: tailwind)
+  --preserve-vibrancy   Lock the brand accent exactly and solve the on-color
+                        label for AAA instead of shifting accent lightness
+                        (bright accents get an ultra-dark chromatic-gray label;
+                        mid-bright brands fall back to normalization)
 ```
 
 ---
@@ -341,7 +353,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (43 test cases and counting).
+All tests pass (51 test cases and counting).
 
 ---
 

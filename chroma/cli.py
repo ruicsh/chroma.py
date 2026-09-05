@@ -6,8 +6,39 @@ import argparse
 import sys
 from pathlib import Path
 
+from chroma.color import parse_hex, rgb_to_hex
 from chroma.serializers import emit_tailwind, serialize_json
-from chroma.tokens import build_layers
+from chroma.tokens import build_layers, verify_contrast
+
+
+def _report_accent(
+    hex_value: str, layers: dict[str, dict[str, dict[str, str]]]
+) -> None:
+    """Warn + report the on-color and its contrast when vibrancy is preserved.
+
+    A preserved accent is defined as the emitted brand accent matching the
+    input hex exactly; when it doesn't, the brand was mid-bright and chroma
+    fell back to the lightness-normalized path. The achieved text-on-accent
+    ratio is reported against every action state for both themes.
+    """
+    brand = rgb_to_hex(parse_hex(hex_value))
+    preserved = layers["light"]["global"]["accent"] == brand
+    if not preserved:
+        print(
+            "chroma: warning: this brand is mid-bright, so no on-color can clear "
+            "WCAG AAA while preserving its vibrancy — fell back to lightness "
+            "normalization.",
+            file=sys.stderr,
+        )
+    report = verify_contrast(layers)
+    for theme_name, pairings in report.items():
+        for state in ("bg-action-primary", "bg-action-hover", "bg-action-active"):
+            pairing = f"text-on-accent/{state}"
+            ratio = pairings[pairing]
+            print(
+                f"chroma: [{theme_name}] {pairing}: {ratio:.2f}:1",
+                file=sys.stderr,
+            )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,23 +60,35 @@ def main(argv: list[str] | None = None) -> int:
         default="tailwind",
         help="The configuration file target standard (Default: tailwind)",
     )
+    parser.add_argument(
+        "--preserve-vibrancy",
+        action="store_true",
+        help="Lock the brand accent exactly and solve the on-color label for AAA "
+        "instead of shifting accent lightness (bright accents get an ultra-dark "
+        "chromatic-gray label; mid-bright brands fall back to normalization)",
+    )
     args = parser.parse_args(argv)
 
     try:
-        layers = build_layers(args.hex)
+        layers = build_layers(args.hex, preserve_vibrancy=args.preserve_vibrancy)
     except ValueError as exc:
         print(f"chroma: error: {exc}", file=sys.stderr)
         return 2
 
+    if args.preserve_vibrancy:
+        _report_accent(args.hex, layers)
+
     if args.format == "json":
-        payload = serialize_json(layers, args.hex)
+        payload = serialize_json(
+            layers, args.hex, preserve_vibrancy=args.preserve_vibrancy
+        )
         if args.output:
             Path(args.output).write_text(payload)
             print(f"wrote {args.output}", file=sys.stderr)
         else:
             sys.stdout.write(payload)
     else:
-        emit_tailwind(layers, args.output)
+        emit_tailwind(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     return 0
 
 

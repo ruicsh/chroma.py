@@ -31,6 +31,8 @@ from chroma.color import (
 )
 
 _AAA_SOLID = 7.0  # accent solid vs its on-color label
+_AAA_TARGET = _AAA_SOLID + 0.2  # headroom so hover/active chroma shifts stay AAA
+_ON_TINT_CHROMA = 0.015  # brand-hue chroma for the dark "chromatic gray" on-color
 
 STEP_KEYS: tuple[str, ...] = tuple(f"step-{step}" for step in range(1, 13))
 
@@ -195,15 +197,53 @@ def _normalize_lightness(
     return (lo + hi) / 2.0
 
 
+def _on_tint_lightness(
+    accent_lightness: float,
+    accent_states: tuple[tuple[float, float, float], ...],
+    hue: float,
+) -> float:
+    """Lightest dark on-color lightness that still clears AAA vs the accent.
+
+    The on-color is a "chromatic gray": the brand hue at a restrained chroma.
+    Its lightness is binary-searched upward from near-black to the highest
+    value that keeps ``contrast_ratio(accent, on) >= _AAA_TARGET`` for *every*
+    accent state (base, hover, active) — the lightest dark tint that reads as
+    AAA against the whole action stack.
+    """
+
+    def contrast_at(lightness: float) -> float:
+        on_rgb = oklch_to_rgb((lightness, _ON_TINT_CHROMA, hue))
+        ratios = [
+            contrast_ratio(oklch_to_rgb(state), on_rgb) for state in accent_states
+        ]
+        return min(ratios)
+
+    lo, hi = 0.02, accent_lightness
+    for _ in range(48):
+        mid = (lo + hi) / 2
+        if contrast_at(mid) >= _AAA_TARGET:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0
+
+
 def accent_scale(
     brand_rgb: tuple[float, float, float],
+    preserve_vibrancy: bool = False,
 ) -> dict[str, tuple[float, float, float]]:
     """Build the brand accent tokens as ``{token: (L, C, H)}`` in OKLCH.
 
-    ``accent`` keeps the brand hue and chroma but has its lightness normalized
-    so the on-color label clears strict AAA (>=7:1). Hover/active vary chroma
-    (perceived vibrancy) while keeping the same lightness, so the AAA
-    guarantee is preserved across interaction states.
+    By default ``accent`` keeps the brand hue and chroma but has its lightness
+    normalized so the on-color label clears strict AAA (>=7:1). With
+    ``preserve_vibrancy`` the accent lightness/chroma/hue are locked exactly to
+    the brand and the on-color is solved instead: a bright accent gets an
+    ultra-dark "chromatic gray" tint (brand hue, small chroma, lightest shade
+    still clearing AAA), a dark accent keeps white. Mid-bright brands for which
+    no on-color can clear AAA fall back to the normalized path.
+
+    Hover/active vary chroma (perceived vibrancy) while keeping the same
+    lightness, so the AAA guarantee is preserved across interaction states.
     """
     lightness, chroma, hue = rgb_to_oklch(brand_rgb)
     lum = relative_luminance(brand_rgb)
@@ -212,7 +252,39 @@ def accent_scale(
     # stronger, above it black text is. This keeps mid-bright brands vivid
     # instead of forcing them toward black/white.
     on_rgb = (1.0, 1.0, 1.0) if lum <= 0.179 else (0.0, 0.0, 0.0)
-    primary = _normalize_lightness(lightness, chroma, hue, on_rgb, _AAA_SOLID + 0.2)
+
+    if preserve_vibrancy:
+        accent_rgb = oklch_to_rgb((lightness, chroma, hue))
+        hover = (lightness, min(chroma * 1.10, 0.35), hue)
+        active = (lightness, max(chroma * 0.90, 0.0), hue)
+        # Bright neon accent: lock it, and solve a dark chromatic-gray on-color
+        # that clears AAA against the whole action stack (base, hover, active).
+        if contrast_ratio(accent_rgb, (0.0, 0.0, 0.0)) >= _AAA_TARGET:
+            on_oklch = (
+                _on_tint_lightness(
+                    lightness, ((lightness, chroma, hue), hover, active), hue
+                ),
+                _ON_TINT_CHROMA,
+                hue,
+            )
+            return {
+                "accent": (lightness, chroma, hue),
+                "accent-hover": hover,
+                "accent-active": active,
+                "accent-on": on_oklch,
+            }
+        # Dark accent: white already clears AAA at the locked lightness.
+        if contrast_ratio(accent_rgb, (1.0, 1.0, 1.0)) >= _AAA_TARGET:
+            return {
+                "accent": (lightness, chroma, hue),
+                "accent-hover": hover,
+                "accent-active": active,
+                "accent-on": rgb_to_oklch((1.0, 1.0, 1.0)),
+            }
+        # Mid-bright: impossible to clear AAA without shifting lightness; fall
+        # through to the normalized path below (the CLI warns on this).
+
+    primary = _normalize_lightness(lightness, chroma, hue, on_rgb, _AAA_TARGET)
     return {
         "accent": (primary, chroma, hue),
         "accent-hover": (primary, min(chroma * 1.10, 0.35), hue),
@@ -221,14 +293,18 @@ def accent_scale(
     }
 
 
-def build_layers(hex_value: str) -> dict[str, dict[str, dict[str, str]]]:
+def build_layers(
+    hex_value: str, preserve_vibrancy: bool = False
+) -> dict[str, dict[str, dict[str, str]]]:
     """Compile the two-tier dual-theme token map from a brand hex.
 
     Returns ``{theme: {layer: {token: hex}}}`` where ``layer`` is one of
     ``global`` / ``semantic``. All neutral tokens carry the locked brand hue
     (chromatic grays); the accent is the brand color normalized to clear WCAG
-    AAA against its on-color label. Component tokens are not generated — they
-    belong in the code layer (see README "Component tokens (code layer)").
+    AAA against its on-color label (or, with ``preserve_vibrancy``, locked to
+    the brand with the on-color solved instead). Component tokens are not
+    generated — they belong in the code layer (see README "Component tokens
+    (code layer)").
     """
     brand = parse_hex(hex_value)
     _, _, hue = rgb_to_oklch(brand)
@@ -238,7 +314,7 @@ def build_layers(hex_value: str) -> dict[str, dict[str, dict[str, str]]]:
             name: oklch_to_hex(*oklch)
             for name, oklch in {
                 **neutral_steps(theme, hue),
-                **accent_scale(brand),
+                **accent_scale(brand, preserve_vibrancy=preserve_vibrancy),
             }.items()
         }
         semantic = {

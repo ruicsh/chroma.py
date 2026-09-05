@@ -145,6 +145,37 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("error", err.getvalue().lower())
 
+    def test_preserve_vibrancy_json_meta_and_report(self):
+        out = io.StringIO()
+        err = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = main(["00ffff", "--preserve-vibrancy", "-f", "json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertTrue(payload["meta"]["preserve_vibrancy"])
+        self.assertEqual(payload["global"]["light"]["accent"], "#00ffff")
+        self.assertIn("text-on-accent/bg-action-primary", err.getvalue())
+        self.assertIn("7.22:1", err.getvalue())
+
+    def test_preserve_vibrancy_mid_bright_warns(self):
+        out = io.StringIO()
+        err = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = main(["6366f1", "--preserve-vibrancy"])
+        self.assertEqual(code, 0)
+        self.assertIn("warning", err.getvalue())
+        self.assertIn("fell back", err.getvalue())
+
+    def test_preserve_vibrancy_flag_not_set_no_report(self):
+        out = io.StringIO()
+        err = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = main(["00ffff", "-f", "json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertFalse(payload["meta"]["preserve_vibrancy"])
+        self.assertNotIn("text-on-accent/", err.getvalue())
+
     def test_help_exits_zero(self):
         out = io.StringIO()
         with self.assertRaises(SystemExit) as cm:

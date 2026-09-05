@@ -121,6 +121,51 @@ class TestAccent(unittest.TestCase):
             self.assertAlmostEqual(hue, brand_hue, delta=1e-9)
 
 
+class TestPreserveVibrancy(unittest.TestCase):
+    def test_bright_accent_locked_with_dark_chromatic_gray_label(self):
+        layers = build_layers("00ffff", preserve_vibrancy=True)
+        for theme_name in ("light", "dark"):
+            with self.subTest(theme=theme_name):
+                global_tokens = layers[theme_name]["global"]
+                self.assertEqual(global_tokens["accent"], "#00ffff")
+                self.assertNotEqual(global_tokens["accent-on"], "#000000")
+                self.assertEqual(global_tokens["accent-on"], "#3f4b4b")
+                on_l, on_c, on_h = rgb_to_oklch(parse_hex(global_tokens["accent-on"]))
+                _, _, brand_hue = rgb_to_oklch(parse_hex("00ffff"))
+                # 8-bit hex quantization makes hue ill-conditioned on near-gray
+                # tints, so allow a few degrees of drift from the brand hue.
+                self.assertAlmostEqual(on_h, brand_hue, delta=5.0)
+                self.assertLessEqual(on_c, 0.02)
+                self.assertLess(on_l, 0.5)
+
+    def test_bright_accent_aaa_across_action_states(self):
+        layers = build_layers("00ffff", preserve_vibrancy=True)
+        report = verify_contrast(layers)
+        for theme_name in ("light", "dark"):
+            for state in ("bg-action-primary", "bg-action-hover", "bg-action-active"):
+                with self.subTest(theme=theme_name, state=state):
+                    self.assertGreaterEqual(
+                        report[theme_name][f"text-on-accent/{state}"], 7.0
+                    )
+
+    def test_dark_accent_preserved_keeps_white_label(self):
+        layers = build_layers("111827", preserve_vibrancy=True)
+        for theme_name in ("light", "dark"):
+            with self.subTest(theme=theme_name):
+                self.assertEqual(layers[theme_name]["global"]["accent"], "#111827")
+                self.assertEqual(layers[theme_name]["global"]["accent-on"], "#ffffff")
+
+    def test_mid_bright_falls_back_to_normalization(self):
+        preserved = build_layers("6366f1", preserve_vibrancy=True)
+        default = build_layers("6366f1")
+        self.assertEqual(preserved, default)
+
+    def test_default_path_unchanged(self):
+        self.assertEqual(
+            build_layers("00ffff"), build_layers("00ffff", preserve_vibrancy=False)
+        )
+
+
 class TestContrastGuarantees(unittest.TestCase):
     def test_aaa_guarantees(self):
         for brand in BRANDS:
