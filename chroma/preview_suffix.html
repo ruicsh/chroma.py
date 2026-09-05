@@ -258,11 +258,40 @@ h2 {
     </div>
   </section>
 
-  <!-- semantic surface / border / text -->
+  <!-- semantic groups -->
   <section>
-    <h2>Semantic Mapping Matrix</h2>
-    <p class="section-note">Functional intent → global token. Neutral steps power surfaces, borders and text.</p>
-    <div class="matrix" id="matrix"></div>
+    <h2>Semantic Tokens</h2>
+    <p class="section-note">Functional intent → global token.</p>
+
+    <div class="status-group">
+      <h3>bg-surface</h3>
+      <p class="section-note" style="margin-bottom:8px;">Surfaces — canvas, panels, hover/active, overlay, and status tints.</p>
+      <div class="matrix" id="matrix-surface"></div>
+    </div>
+
+    <div class="status-group">
+      <h3>border</h3>
+      <p class="section-note" style="margin-bottom:8px;">Boundaries — subtle rules, strong focus, and status borders.</p>
+      <div class="matrix" id="matrix-border"></div>
+    </div>
+
+    <div class="status-group">
+      <h3>text</h3>
+      <p class="section-note" style="margin-bottom:8px;">Typography — primary/muted/disabled and status text.</p>
+      <div class="matrix" id="matrix-text"></div>
+    </div>
+
+    <div class="status-group">
+      <h3>text-on</h3>
+      <p class="section-note" style="margin-bottom:8px;">On-colors — labels on accent and status solids.</p>
+      <div class="matrix" id="matrix-on"></div>
+    </div>
+
+    <div class="status-group">
+      <h3>bg-action</h3>
+      <p class="section-note" style="margin-bottom:8px;">Actions — brand execution.</p>
+      <div class="matrix" id="matrix-action"></div>
+    </div>
   </section>
 
   <!-- status families -->
@@ -361,31 +390,69 @@ rampEl.innerHTML = ramp.map(([name, use, token]) => {
   </div>`;
 }).join('');
 
-const matrixEl = document.getElementById('matrix');
-const matrix = [
-  ['bg-surface-root', 'var(--step-1)', 'root canvas'],
-  ['bg-surface-default', 'var(--step-2)', 'layout panels & cards'],
-  ['bg-surface-subtle', 'var(--step-3)', 'inputs, table cells'],
-  ['bg-surface-hover', 'var(--step-4)', 'row hover'],
-  ['bg-surface-active', 'var(--step-5)', 'selected / active'],
-  ['border-subtle', 'var(--step-6)', 'grid-line dividers'],
-  ['border-default', 'var(--step-7)', 'component boundaries'],
-  ['border-strong', 'var(--step-8)', 'focus rings'],
-  ['text-disabled', 'var(--step-8)', 'recessed text'],
-  ['text-muted', 'var(--step-10)', 'metadata / labels'],
-  ['text-secondary', 'var(--step-11)', 'body text'],
-  ['text-primary', 'var(--step-12)', 'headings'],
-  ['bg-action-primary', 'var(--accent)', 'primary buttons'],
-  ['bg-action-hover', 'var(--accent-hover)', 'button hover'],
-  ['bg-action-active', 'var(--accent-active)', 'button pressed'],
-  ['text-on-accent', 'var(--accent-on)', 'labels on accent'],
-];
-matrixEl.innerHTML = matrix.map(([token, ref, use]) => `
+function renderMatrix(elId, rows) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = rows.map(([token, ref, use]) => `
   <div class="row">
     <div class="chip" style="background: var(--${token});"></div>
     <div class="labels"><b>${token}</b><span>${use}</span></div>
     <div class="arrow">→ ${ref}</div>
   </div>`).join('');
+}
+
+const matrixSurface = [
+  ['bg-surface-root', 'var(--step-1)', 'root canvas'],
+  ['bg-surface-default', 'var(--step-2)', 'layout panels & cards'],
+  ['bg-surface-subtle', 'var(--step-3)', 'inputs, table cells'],
+  ['bg-surface-hover', 'var(--step-4)', 'row hover'],
+  ['bg-surface-active', 'var(--step-5)', 'selected / active'],
+  ['bg-surface-overlay', 'direct', 'popovers, modals'],
+  ['bg-success-subtle', 'var(--success-2)', 'success tint'],
+  ['bg-success-strong', 'var(--success)', 'success solid'],
+  ['bg-warning-subtle', 'var(--warning-2)', 'warning tint'],
+  ['bg-warning-strong', 'var(--warning)', 'warning solid'],
+  ['bg-danger-subtle', 'var(--danger-2)', 'danger tint'],
+  ['bg-danger-strong', 'var(--danger)', 'danger solid'],
+  ['bg-info-subtle', 'var(--info-2)', 'info tint'],
+  ['bg-info-strong', 'var(--info)', 'info solid'],
+];
+const matrixBorder = [
+  ['border-subtle', 'var(--step-6)', 'grid-line dividers'],
+  ['border-default', 'var(--step-7)', 'component boundaries'],
+  ['border-strong', 'var(--step-8)', 'focus rings'],
+  ['border-success', 'var(--success-6)', 'success border'],
+  ['border-warning', 'var(--warning-6)', 'warning border'],
+  ['border-danger', 'var(--danger-6)', 'danger border'],
+  ['border-info', 'var(--info-6)', 'info border'],
+];
+const matrixText = [
+  ['text-disabled', 'var(--step-8)', 'recessed text'],
+  ['text-muted', 'var(--step-10)', 'metadata / labels'],
+  ['text-secondary', 'var(--step-11)', 'body text'],
+  ['text-primary', 'var(--step-12)', 'headings'],
+  ['text-success', 'var(--success-11)', 'success text'],
+  ['text-warning', 'var(--warning-11)', 'warning text'],
+  ['text-danger', 'var(--danger-11)', 'danger text'],
+  ['text-info', 'var(--info-11)', 'info text'],
+];
+const matrixOn = [
+  ['text-on-accent', 'var(--accent-on)', 'labels on accent'],
+  ['text-on-success', 'var(--success-on)', 'on success'],
+  ['text-on-warning', 'var(--warning-on)', 'on warning'],
+  ['text-on-danger', 'var(--danger-on)', 'on danger'],
+  ['text-on-info', 'var(--info-on)', 'on info'],
+];
+const matrixAction = [
+  ['bg-action-primary', 'var(--accent)', 'primary buttons'],
+  ['bg-action-hover', 'var(--accent-hover)', 'button hover'],
+  ['bg-action-active', 'var(--accent-active)', 'button pressed'],
+];
+renderMatrix('matrix-surface', matrixSurface);
+renderMatrix('matrix-border', matrixBorder);
+renderMatrix('matrix-text', matrixText);
+renderMatrix('matrix-on', matrixOn);
+renderMatrix('matrix-action', matrixAction);
 
 const statuses = ['success', 'warning', 'danger', 'info'];
 const statusEl = document.getElementById('statuses');
