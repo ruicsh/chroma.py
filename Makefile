@@ -13,6 +13,7 @@ test:
 	uv run python -m unittest discover -v -s chroma/tests
 
 run:
+	uv run python -m chroma $(or $(filter-out $@,$(MAKECMDGOALS)),6366f1) -f preview -o preview.html
 	uv run python -m chroma $(or $(filter-out $@,$(MAKECMDGOALS)),6366f1)
 
 samples:
@@ -26,6 +27,7 @@ samples:
 	uv run python -m chroma 6366f1 -f sass -o samples/theme.scss
 	uv run python -m chroma 6366f1 -f less -o samples/theme.less
 	uv run python -m chroma 6366f1 -f stylus -o samples/theme.styl
+	uv run python -m chroma 6366f1 -f preview -o samples/preview.html
 
 %:
 	@true

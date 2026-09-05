@@ -12,11 +12,13 @@ from chroma.serializers import (
     emit_figma,
     emit_json,
     emit_less,
+    emit_preview,
     emit_sass,
     emit_stylus,
     emit_ts,
     emit_tailwind,
     emit_tailwind_v3,
+    serialize_preview,
 )
 from chroma.tokens import STATUS_FAMILIES, build_layers, verify_contrast
 
@@ -85,6 +87,7 @@ def main(argv: list[str] | None = None) -> int:
             "sass",
             "less",
             "stylus",
+            "preview",
         ),
         default="tailwind",
         help="The configuration file target standard (Default: tailwind)",
@@ -130,8 +133,31 @@ def main(argv: list[str] | None = None) -> int:
         emit_stylus(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "tailwind-v3":
         emit_tailwind_v3(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "preview":
+        emit_preview(
+            layers, args.output, args.hex, preserve_vibrancy=args.preserve_vibrancy
+        )
     else:
         emit_tailwind(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+
+    # When a theme file is created, also emit a visual preview alongside it.
+    if args.output is not None and args.format != "preview":
+        from pathlib import Path
+
+        out_path = Path(args.output)
+        preview_path = out_path.parent / "preview.html"
+        # Avoid overwriting the main output if it is already preview.html
+        try:
+            is_same = preview_path.resolve() == out_path.resolve()
+        except Exception:
+            is_same = str(preview_path) == str(out_path)
+        if not is_same:
+            preview_path.write_text(
+                serialize_preview(
+                    layers, args.hex, preserve_vibrancy=args.preserve_vibrancy
+                )
+            )
+            print(f"wrote {preview_path}", file=sys.stderr)
     return 0
 
 
