@@ -21,6 +21,7 @@ samples:
 	python3 -m chroma 6366f1 -f css -o samples/theme.css
 	python3 -m chroma 6366f1 -f ts -o samples/theme.ts
 	python3 -m chroma 6366f1 -f dtcg -o samples/theme.dtcg.json
+	python3 -m chroma 6366f1 -f figma -o samples/figma.json
 	python3 -m chroma 6366f1 -f json -o samples/tokens.json
 	python3 -m chroma 6366f1 -f sass -o samples/theme.scss
 	python3 -m chroma 6366f1 -f less -o samples/theme.less

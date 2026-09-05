@@ -9,6 +9,7 @@ from chroma.color import parse_hex, rgb_to_hex
 from chroma.serializers import (
     emit_css,
     emit_dtcg,
+    emit_figma,
     emit_json,
     emit_less,
     emit_sass,
@@ -72,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
             "css",
             "ts",
             "dtcg",
+            "figma",
             "sass",
             "less",
             "stylus",
@@ -110,6 +112,8 @@ def main(argv: list[str] | None = None) -> int:
         emit_ts(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "dtcg":
         emit_dtcg(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "figma":
+        emit_figma(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "sass":
         emit_sass(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "less":

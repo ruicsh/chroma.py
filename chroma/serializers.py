@@ -486,6 +486,76 @@ def serialize_dtcg(
 
 
 # ---------------------------------------------------------------------------
+# Figma Variables (native DTCG import)
+# ---------------------------------------------------------------------------
+
+# Per-mode file naming: a ``theme.json`` target becomes ``theme.light.json``
+# and ``theme.dark.json``. Figma's native import creates one mode per dropped
+# file, so the theme name carried by the file name maps directly to a mode.
+_MODE_THEME_ORDER: tuple[str, ...] = ("light", "dark")
+
+
+def serialize_figma_mode(
+    layers: dict[str, dict[str, dict[str, str]]],
+    theme_name: str,
+    preserve_vibrancy: bool = False,
+) -> str:
+    """Serialize one theme as a single-mode Figma-native DTCG document.
+
+    Figma's native "Import into Variables" consumes DTCG JSON where one file
+    is one mode: a new mode is created for each dropped file and variables are
+    created only for tokens present (with the same ``$type``) in every file.
+    Each mode therefore carries the full semantic tree (``bg.surface.root``,
+    ``text.on.accent``, ...) with that theme's resolved hex values.
+    """
+    return json.dumps(_dtcg_tree(layers[theme_name]["semantic"]), indent=2) + "\n"
+
+
+def serialize_figma(
+    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+) -> str:
+    """Serialize the light-mode document (the single file stdout carries)."""
+    return serialize_figma_mode(layers, "light", preserve_vibrancy)
+
+
+def _figma_targets(output: str) -> tuple[Path, Path]:
+    """Derive the per-mode file paths from an ``-o`` target.
+
+    A ``theme.json`` (or extension-less ``theme``) target produces
+    ``theme.light.json`` and ``theme.dark.json``.
+    """
+    stem = Path(output)
+    if stem.suffix == ".json":
+        stem = stem.with_suffix("")
+    return Path(f"{stem}.light.json"), Path(f"{stem}.dark.json")
+
+
+def emit_figma(
+    layers: dict[str, dict[str, dict[str, str]]],
+    output: str | None,
+    preserve_vibrancy: bool = False,
+) -> None:
+    """Resolve the figma format by output target.
+
+    Without ``-o`` the light-mode document reaches stdout and the dark mode is
+    noted on stderr. With ``-o`` both per-mode files are written so designers
+    can drop them together into the Figma Variables panel as one collection
+    with two modes.
+    """
+    if output is None:
+        sys.stdout.write(serialize_figma(layers, preserve_vibrancy))
+        print(
+            "dark mode not shown on stdout; pass -o <path> to write both "
+            "theme.light.json and theme.dark.json for the Figma Variables panel",
+            file=sys.stderr,
+        )
+        return
+    for path, theme_name in zip(_figma_targets(output), _MODE_THEME_ORDER):
+        path.write_text(serialize_figma_mode(layers, theme_name, preserve_vibrancy))
+        print(f"wrote {path}", file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
 # CSS preprocessors (Sass, Less, Stylus)
 # ---------------------------------------------------------------------------
 

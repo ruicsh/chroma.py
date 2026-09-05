@@ -13,6 +13,7 @@ from chroma.cli import main
 from chroma.serializers import (
     serialize_css,
     serialize_dtcg,
+    serialize_figma_mode,
     serialize_json,
     serialize_less,
     serialize_sass,
@@ -193,6 +194,60 @@ class TestTailwindV3Format(unittest.TestCase):
             self.assertIn("wrote", err.getvalue())
 
 
+class TestFigmaFormat(unittest.TestCase):
+    def test_figma_stdout_is_single_mode(self):
+        out = io.StringIO()
+        err = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = main([BRAND, "-f", "figma"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertNotIn("light", payload)
+        self.assertNotIn("dark", payload)
+        root = payload["bg"]["surface"]["root"]
+        self.assertEqual(root["$type"], "color")
+        self.assertRegex(root["$value"], r"^#[0-9a-f]{6}$")
+        self.assertIn("$description", root)
+        self.assertIn("dark mode not shown on stdout", err.getvalue())
+
+    def test_figma_writes_both_modes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "theme.json"
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main([BRAND, "-f", "figma", "-o", str(target)])
+            self.assertEqual(code, 0)
+            light = json.loads((Path(tmp) / "theme.light.json").read_text())
+            dark = json.loads((Path(tmp) / "theme.dark.json").read_text())
+            self.assertEqual(set(light), set(dark))
+            self.assertIn("wrote", err.getvalue())
+            self.assertIn("theme.light.json", err.getvalue())
+            self.assertIn("theme.dark.json", err.getvalue())
+
+    def test_figma_mode_values_match_layers(self):
+        layers = build_layers(BRAND)
+        for theme_name in ("light", "dark"):
+            with self.subTest(theme=theme_name):
+                payload = json.loads(serialize_figma_mode(layers, theme_name))
+                self.assertEqual(
+                    payload["bg"]["surface"]["root"]["$value"],
+                    layers[theme_name]["semantic"]["bg-surface-root"],
+                )
+                self.assertEqual(
+                    payload["text"]["on"]["accent"]["$value"],
+                    layers[theme_name]["semantic"]["text-on-accent"],
+                )
+
+    def test_figma_dark_differs_from_light(self):
+        layers = build_layers(BRAND)
+        light = json.loads(serialize_figma_mode(layers, "light"))
+        dark = json.loads(serialize_figma_mode(layers, "dark"))
+        self.assertNotEqual(
+            light["bg"]["surface"]["root"]["$value"],
+            dark["bg"]["surface"]["root"]["$value"],
+        )
+
+
 class TestSassFormat(unittest.TestCase):
     def test_sass_stdout_structure(self):
         out = io.StringIO()
@@ -310,6 +365,8 @@ class TestSampleSync(unittest.TestCase):
         yield "theme.css", serialize_css(layers)
         yield "theme.ts", serialize_ts(layers)
         yield "theme.dtcg.json", serialize_dtcg(layers)
+        yield "figma.light.json", serialize_figma_mode(layers, "light")
+        yield "figma.dark.json", serialize_figma_mode(layers, "dark")
         yield "tokens.json", serialize_json(layers, BRAND)
         yield "theme.scss", serialize_sass(layers)
         yield "theme.less", serialize_less(layers)
