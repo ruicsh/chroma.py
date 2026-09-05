@@ -1,4 +1,4 @@
-"""Tests for the css / ts / dtcg output formats and the committed samples."""
+"""Tests for the css / ts / dtcg / sass / less / stylus output formats and the committed samples."""
 
 import io
 import json
@@ -14,6 +14,9 @@ from chroma.serializers import (
     serialize_css,
     serialize_dtcg,
     serialize_json,
+    serialize_less,
+    serialize_sass,
+    serialize_stylus,
     serialize_tailwind_v3_config,
     serialize_tailwind_v4_css,
     serialize_ts,
@@ -190,15 +193,127 @@ class TestTailwindV3Format(unittest.TestCase):
             self.assertIn("wrote", err.getvalue())
 
 
+class TestSassFormat(unittest.TestCase):
+    def test_sass_stdout_structure(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main([BRAND, "-f", "sass"])
+        self.assertEqual(code, 0)
+        text = out.getvalue()
+        self.assertIn("$chroma-theme: (", text)
+        self.assertIn("  light: (", text)
+        self.assertIn("  dark: (", text)
+        self.assertIn("// The 12-Step Mathematical Gray Ramp", text)
+        self.assertIn("// Semantic Structural Mapping Matrix", text)
+        self.assertIn("step-1: #fbfcfe,", text)
+        self.assertIn("bg-surface-root: #fbfcfe,", text)
+
+    def test_sass_values_match_layers(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "sass"])
+        text = out.getvalue()
+        layers = build_layers(BRAND)
+        for theme_name in ("light", "dark"):
+            for token, value in layers[theme_name]["semantic"].items():
+                with self.subTest(theme=theme_name, token=token):
+                    self.assertIn(f"{token}: {value},", text)
+
+    def test_sass_to_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "theme.scss"
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main([BRAND, "-f", "sass", "-o", str(target)])
+            self.assertEqual(code, 0)
+            self.assertIn("$chroma-theme: (", target.read_text())
+            self.assertIn("wrote", err.getvalue())
+
+
+class TestLessFormat(unittest.TestCase):
+    def test_less_stdout_structure(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main([BRAND, "-f", "less"])
+        self.assertEqual(code, 0)
+        text = out.getvalue()
+        self.assertIn("@chroma-theme: {", text)
+        self.assertIn("  @light: {", text)
+        self.assertIn("  @dark: {", text)
+        self.assertIn("// Semantic Structural Mapping Matrix", text)
+        self.assertIn("@step-1: #fbfcfe;", text)
+        self.assertIn("@bg-surface-root: #fbfcfe;", text)
+
+    def test_less_values_match_layers(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "less"])
+        text = out.getvalue()
+        layers = build_layers(BRAND)
+        for theme_name in ("light", "dark"):
+            for token, value in layers[theme_name]["semantic"].items():
+                with self.subTest(theme=theme_name, token=token):
+                    self.assertIn(f"@{token}: {value};", text)
+
+    def test_less_to_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "theme.less"
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main([BRAND, "-f", "less", "-o", str(target)])
+            self.assertEqual(code, 0)
+            self.assertIn("@chroma-theme: {", target.read_text())
+            self.assertIn("wrote", err.getvalue())
+
+
+class TestStylusFormat(unittest.TestCase):
+    def test_stylus_stdout_structure(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main([BRAND, "-f", "stylus"])
+        self.assertEqual(code, 0)
+        text = out.getvalue()
+        self.assertIn("chroma-theme = {", text)
+        self.assertIn("  light: {", text)
+        self.assertIn("  dark: {", text)
+        self.assertIn("// Semantic Structural Mapping Matrix", text)
+        self.assertIn("'step-1': #fbfcfe,", text)
+        self.assertIn("'bg-surface-root': #fbfcfe,", text)
+
+    def test_stylus_values_match_layers(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            main([BRAND, "-f", "stylus"])
+        text = out.getvalue()
+        layers = build_layers(BRAND)
+        for theme_name in ("light", "dark"):
+            for token, value in layers[theme_name]["semantic"].items():
+                with self.subTest(theme=theme_name, token=token):
+                    self.assertIn(f"'{token}': {value},", text)
+
+    def test_stylus_to_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "theme.styl"
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main([BRAND, "-f", "stylus", "-o", str(target)])
+            self.assertEqual(code, 0)
+            self.assertIn("chroma-theme = {", target.read_text())
+            self.assertIn("wrote", err.getvalue())
+
+
 class TestSampleSync(unittest.TestCase):
     def _expected_samples(self):
         layers = build_layers(BRAND)
         yield "tailwind-v4.css", serialize_tailwind_v4_css(layers)
         yield "tailwind-v3.js", serialize_tailwind_v3_config()
-        yield "chroma.css", serialize_css(layers)
-        yield "chroma-theme.ts", serialize_ts(layers)
-        yield "chroma-theme.dtcg.json", serialize_dtcg(layers)
-        yield "chroma-tokens.json", serialize_json(layers, BRAND)
+        yield "theme.css", serialize_css(layers)
+        yield "theme.ts", serialize_ts(layers)
+        yield "theme.dtcg.json", serialize_dtcg(layers)
+        yield "tokens.json", serialize_json(layers, BRAND)
+        yield "theme.scss", serialize_sass(layers)
+        yield "theme.less", serialize_less(layers)
+        yield "theme.styl", serialize_stylus(layers)
 
     def test_samples_up_to_date(self):
         root = Path(__file__).resolve().parents[2]

@@ -18,10 +18,13 @@ run:
 samples:
 	python3 -m chroma 6366f1 -o samples/tailwind-v4.css
 	python3 -m chroma 6366f1 -f tailwind-v3 -o samples/tailwind-v3.js
-	python3 -m chroma 6366f1 -f css -o samples/chroma.css
-	python3 -m chroma 6366f1 -f ts -o samples/chroma-theme.ts
-	python3 -m chroma 6366f1 -f dtcg -o samples/chroma-theme.dtcg.json
-	python3 -m chroma 6366f1 -f json -o samples/chroma-tokens.json
+	python3 -m chroma 6366f1 -f css -o samples/theme.css
+	python3 -m chroma 6366f1 -f ts -o samples/theme.ts
+	python3 -m chroma 6366f1 -f dtcg -o samples/theme.dtcg.json
+	python3 -m chroma 6366f1 -f json -o samples/tokens.json
+	python3 -m chroma 6366f1 -f sass -o samples/theme.scss
+	python3 -m chroma 6366f1 -f less -o samples/theme.less
+	python3 -m chroma 6366f1 -f stylus -o samples/theme.styl
 
 %:
 	@true

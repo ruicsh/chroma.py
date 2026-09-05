@@ -98,7 +98,7 @@ The global ramps are emitted as **hex** (maximum browser compatibility); the sem
 A raw, Tailwind-free stylesheet for universal web-component and plain-CSS setups. `:root` carries the light theme, `.dark` the dark theme; the global ramps are concrete hex while semantic tokens chain through `var()`. No `@import`, `@theme` or `@custom-variant` — just the variables:
 
 ```bash
-python3 -m chroma 6366f1 --format css -o chroma.css
+python3 -m chroma 6366f1 --format css -o theme.css
 ```
 
 ### TypeScript module (`--format ts`)
@@ -106,7 +106,7 @@ python3 -m chroma 6366f1 --format css -o chroma.css
 A compile-time-safe module for analytical dashboards, chart theming and custom viewport components. `chromaTheme` is frozen with `as const` (immune to accidental mutation during active view rendering) and its shape is exposed as the exported `ChromaTheme` type:
 
 ```bash
-python3 -m chroma 6366f1 --format ts -o chroma-theme.ts
+python3 -m chroma 6366f1 --format ts -o theme.ts
 ```
 
 ### W3C DTCG document (`--format dtcg`)
@@ -114,23 +114,52 @@ python3 -m chroma 6366f1 --format ts -o chroma-theme.ts
 A [W3C Design Tokens Community Group](https://tr.designtokens.org/format/) JSON document — every token is nested with explicit `$value`, `$type` and `$description` — ready for ingestion by external tooling such as [Style Dictionary](https://styledictionary.com/). Light and dark theme trees are grouped under top-level `light` / `dark` keys:
 
 ```bash
-python3 -m chroma 6366f1 --format dtcg -o chroma-theme.dtcg.json
+python3 -m chroma 6366f1 --format dtcg -o theme.dtcg.json
 ```
 
 All three targets emit only the **semantic tokens** (plus, for `css`, the global ramps its `var()` chain depends on).
+
+### Sass variables (`--format sass`)
+
+A SCSS partial with a nested Sass map keyed by theme. `$chroma-theme` holds the global ramps + accent and the semantic tokens under `light` / `dark`, all in concrete hex — so any Sass toolchain can consume the theme in one `@use`:
+
+```bash
+python3 -m chroma 6366f1 --format sass -o theme.scss
+```
+
+### Less variables (`--format less`)
+
+A Less map (Less ≥ 3.5) keyed by theme. `@chroma-theme` nests `@light` / `@dark` maps holding the global ramps + accent and the semantic tokens in concrete hex:
+
+```bash
+python3 -m chroma 6366f1 --format less -o theme.less
+```
+
+### Stylus variables (`--format stylus`)
+
+A Stylus hash keyed by theme. `chroma-theme` holds `light` / `dark` object literals with the global ramps + accent and the semantic tokens in concrete hex (keys are quoted so the `-N` step suffixes parse unambiguously):
+
+```bash
+python3 -m chroma 6366f1 --format stylus -o theme.styl
+```
+
+All three preprocessor targets emit **both** tiers (global ramps + accent, then semantic tokens) resolved to concrete hex — preprocessor variables are compile-time and cannot chain through CSS `var()`, so each theme holds its final values.
 
 ### Sample outputs
 
 Committed sample outputs for every format, generated from the `6366f1` brand. Regenerate them with `make samples`:
 
-| Format          | Command                                   | Sample                                                             |
-| :-------------- | :---------------------------------------- | :----------------------------------------------------------------- |
-| `tailwind` (v4) | `python3 -m chroma 6366f1`                | [`samples/tailwind-v4.css`](samples/tailwind-v4.css)               |
-| `tailwind-v3`   | `python3 -m chroma 6366f1 -f tailwind-v3` | [`samples/tailwind-v3.js`](samples/tailwind-v3.js)                 |
-| `css`           | `python3 -m chroma 6366f1 -f css`         | [`samples/chroma.css`](samples/chroma.css)                         |
-| `ts`            | `python3 -m chroma 6366f1 -f ts`          | [`samples/chroma-theme.ts`](samples/chroma-theme.ts)               |
-| `dtcg`          | `python3 -m chroma 6366f1 -f dtcg`        | [`samples/chroma-theme.dtcg.json`](samples/chroma-theme.dtcg.json) |
-| `json`          | `python3 -m chroma 6366f1 -f json`        | [`samples/chroma-tokens.json`](samples/chroma-tokens.json)         |
+| Format          | Command                                   | Sample                                               |
+| :-------------- | :---------------------------------------- | :--------------------------------------------------- |
+| `tailwind` (v4) | `python3 -m chroma 6366f1`                | [`samples/tailwind-v4.css`](samples/tailwind-v4.css) |
+| `tailwind-v3`   | `python3 -m chroma 6366f1 -f tailwind-v3` | [`samples/tailwind-v3.js`](samples/tailwind-v3.js)   |
+| `css`           | `python3 -m chroma 6366f1 -f css`         | [`samples/theme.css`](samples/theme.css)             |
+| `ts`            | `python3 -m chroma 6366f1 -f ts`          | [`samples/theme.ts`](samples/theme.ts)               |
+| `dtcg`          | `python3 -m chroma 6366f1 -f dtcg`        | [`samples/theme.dtcg.json`](samples/theme.dtcg.json) |
+| `json`          | `python3 -m chroma 6366f1 -f json`        | [`samples/tokens.json`](samples/tokens.json)         |
+| `sass`          | `python3 -m chroma 6366f1 -f sass`        | [`samples/theme.scss`](samples/theme.scss)           |
+| `less`          | `python3 -m chroma 6366f1 -f less`        | [`samples/theme.less`](samples/theme.less)           |
+| `stylus`        | `python3 -m chroma 6366f1 -f stylus`      | [`samples/theme.styl`](samples/theme.styl)           |
 
 A sync test in the suite asserts every committed sample byte-matches fresh output, so the samples can never drift from the code.
 
@@ -290,7 +319,7 @@ The system ships a test suite that enforces its own contract:
 - **Taxonomy integrity:** every semantic token resolves to its exact global source.
 - **WCAG AAA:** `text-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
-- **Multi-format output:** `css` (vanilla), `ts` (as-const module) and `dtcg` (W3C) targets are covered by the suite, with committed samples kept byte-identical via a sync test.
+- **Multi-format output:** `css` (vanilla), `ts` (as-const module), `dtcg` (W3C), `sass`/`less`/`stylus` (native preprocessor maps) targets are covered by the suite, with committed samples kept byte-identical via a sync test.
 
 The full quality gate — lint (`ruff`), formatting (`ruff format`), type checking (`pyright`) and tests (`unittest`) — runs via:
 
@@ -328,7 +357,7 @@ python3 -m chroma 00ffff --preserve-vibrancy
 ### CLI reference
 
 ```bash
-usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg}] [--preserve-vibrancy] hex
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg,sass,less,stylus}] [--preserve-vibrancy] hex
 
 Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
 from one brand color hex.
@@ -340,7 +369,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -o, --output OUTPUT   Output file path instead of writing to stdout
-  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg}
+  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg,sass,less,stylus}
                         The configuration file target standard (Default: tailwind)
   --preserve-vibrancy   Lock the brand accent exactly and solve the on-color
                         label for AAA instead of shifting accent lightness
@@ -362,7 +391,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (60 test cases and counting).
+All tests pass (69 test cases and counting).
 
 ---
 

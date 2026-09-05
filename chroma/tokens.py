@@ -125,6 +125,7 @@ SEMANTIC_TO_GLOBAL: dict[str, str] = {
     "bg-action-active": "accent-active",
 }
 
+
 def _interp(controls: tuple[tuple[float, float], ...], x: float) -> float:
     """Monotone piecewise-linear interpolation over control points."""
     if x <= controls[0][0]:

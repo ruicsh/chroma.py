@@ -10,6 +10,9 @@ from chroma.serializers import (
     emit_css,
     emit_dtcg,
     emit_json,
+    emit_less,
+    emit_sass,
+    emit_stylus,
     emit_ts,
     emit_tailwind,
     emit_tailwind_v3,
@@ -62,7 +65,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "-f",
         "--format",
-        choices=("json", "tailwind", "tailwind-v3", "css", "ts", "dtcg"),
+        choices=(
+            "json",
+            "tailwind",
+            "tailwind-v3",
+            "css",
+            "ts",
+            "dtcg",
+            "sass",
+            "less",
+            "stylus",
+        ),
         default="tailwind",
         help="The configuration file target standard (Default: tailwind)",
     )
@@ -97,6 +110,12 @@ def main(argv: list[str] | None = None) -> int:
         emit_ts(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "dtcg":
         emit_dtcg(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "sass":
+        emit_sass(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "less":
+        emit_less(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "stylus":
+        emit_stylus(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     elif args.format == "tailwind-v3":
         emit_tailwind_v3(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     else:
