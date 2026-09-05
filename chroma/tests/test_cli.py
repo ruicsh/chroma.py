@@ -10,11 +10,14 @@ from pathlib import Path
 from chroma.cli import main
 
 COMPONENT_MARKERS = (
-    "grid",
-    "btn-primary",
-    "input-field",
-    "input-focus",
-    "input-placeholder",
+    "--bg-grid-",
+    "--border-grid-",
+    "--text-grid-",
+    "--bg-input-",
+    "--border-input-",
+    "--text-input-",
+    "--bg-btn-",
+    "--text-btn-",
 )
 
 
@@ -65,6 +68,17 @@ class TestCLI(unittest.TestCase):
         self.assertIn("--bg-surface-root: var(--step-1);", text)
         self.assertIn("/* Core Semantic Layout Layer */", text)
         self.assertIn("/* The 12-Step Mathematical Gray Ramp */", text)
+        # usage hints
+        self.assertIn(
+            "--color-action-primary: var(--bg-action-primary);  /* bg-action-primary */",
+            text,
+        )
+        self.assertIn(
+            "--color-foreground-muted: var(--text-muted);  /* text-foreground-muted */",
+            text,
+        )
+        self.assertIn("/* app canvas background */", text)
+        self.assertIn("/* primary brand buttons */", text)
 
     def test_tailwind_css_has_no_component_tokens(self):
         out = io.StringIO()
@@ -104,10 +118,15 @@ class TestCLI(unittest.TestCase):
             self.assertNotIn("grid:", config)
             self.assertNotIn("input:", config)
             self.assertNotIn("btn:", config)
+            # usage hints
+            self.assertIn("// surfaces - canvas, cards, hover/active rows", config)
+            self.assertIn("// actions - brand execution buttons", config)
             self.assertIn(":root {", css)
             self.assertIn(".dark {", css)
             self.assertIn("--accent: #d7e8ff;", css)
             self.assertIn("--bg-surface-root: var(--step-1);", css)
+            self.assertIn("/* app canvas background */", css)
+            self.assertIn("/* critical numbers & main titles */", css)
             for marker in COMPONENT_MARKERS:
                 self.assertNotIn(marker, css)
 

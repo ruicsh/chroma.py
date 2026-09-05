@@ -214,6 +214,8 @@ The global ramps are emitted as **hex** (maximum browser compatibility); the sem
 
 Global hex values live in one place; everything else is an alias — and there is nothing grid-, input-, or button-specific in the file.
 
+Every token carries an inline **usage hint**: semantic and accent variables document where they should be used (`--bg-surface-root: var(--step-1);  /* app canvas background */`), and each `@theme` color shows the utility class it generates (`--color-surface-root: var(--bg-surface-root);  /* bg-surface-root */`).
+
 ### Comprehensive Integration Example
 
 To output a pure, raw programmatic JSON matrix — with both tiers in hex and OKLCH plus brand metadata — to feed straight into an advanced charting library or web-component configuration pipeline:

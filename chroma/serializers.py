@@ -18,6 +18,53 @@ from chroma.tokens import SEMANTIC_TO_GLOBAL, THEMES
 
 LAYERS = ("global", "semantic")
 
+# Usage hints emitted as comments so consumers can see where each token is
+# intended to be used without consulting the docs.
+SEMANTIC_USAGE_HINTS: dict[str, str] = {
+    "bg-surface-root": "app canvas background",
+    "bg-surface-default": "layout panels & content cards",
+    "bg-surface-subtle": "form inputs, table cells, alt rows",
+    "bg-surface-hover": "grid row hover states",
+    "bg-surface-active": "selected items, active nav tabs",
+    "bg-surface-overlay": "popovers, dropdowns, modals",
+    "border-subtle": "grid-line cell dividers",
+    "border-default": "component boundary lines",
+    "border-strong": "focus rings & active input outlines",
+    "text-disabled": "recessed inactive parameters",
+    "text-muted": "metadata, labels, table headers",
+    "text-secondary": "body text & descriptive data",
+    "text-primary": "critical numbers & main titles",
+    "text-on-accent": "label/glyph on accent surfaces",
+    "bg-action-primary": "primary brand buttons",
+    "bg-action-hover": "primary button hover",
+    "bg-action-active": "primary button pressed",
+}
+
+ACCENT_USAGE_HINTS: dict[str, str] = {
+    "accent": "brand accent (AAA-normalized)",
+    "accent-hover": "accent hover",
+    "accent-active": "accent pressed",
+    "accent-on": "auto on-color for accent",
+}
+
+# Tailwind utility class each ``@theme`` color maps to, shown as a hint.
+UTILITY_PREFIX: dict[str, str] = {
+    "surface": "bg",
+    "foreground": "text",
+    "border": "border",
+    "on": "text",
+    "action": "bg",
+}
+
+# Brief comment above each v3 config color group.
+GROUP_HINTS: dict[str, str] = {
+    "surface": "surfaces - canvas, cards, hover/active rows",
+    "foreground": "text - primary, secondary, muted, disabled",
+    "border": "borders - subtle rules, boundaries, focus",
+    "on": "on-color - label on accent surfaces",
+    "action": "actions - brand execution buttons",
+}
+
 
 def _tailwind_color_map() -> dict[str, dict[str, str]]:
     """Nested Tailwind ``colors`` shape: group -> member -> CSS var.
@@ -124,6 +171,8 @@ def serialize_json(layers: dict[str, dict[str, dict[str, str]]], brand_hex: str)
 def _render_js_object(obj: dict[str, dict[str, str]], indent: str) -> str:
     lines = []
     for group, members in obj.items():
+        if group in GROUP_HINTS:
+            lines.append(f"{indent}// {GROUP_HINTS[group]}")
         rendered = ", ".join(f"{key}: '{value}'" for key, value in members.items())
         lines.append(f"{indent}{group}: {{ {rendered} }},")
     return "\n".join(lines)
@@ -164,7 +213,8 @@ def _var_block(
         if name == "accent":
             lines.append("")
             lines.append("  /* The 10% High-Velocity Accent Coordinates */")
-        lines.append(f"  --{name}: {value};")
+        hint = ACCENT_USAGE_HINTS.get(name)
+        lines.append(f"  --{name}: {value};{f'  /* {hint} */' if hint else ''}")
     lines.append("")
     lines.append("  /* Semantic Structural Mapping Matrix */")
     for name, value in layers[theme_name]["semantic"].items():
@@ -173,7 +223,8 @@ def _var_block(
             if name in SEMANTIC_TO_GLOBAL
             else value
         )
-        lines.append(f"  --{name}: {rendered};")
+        hint = SEMANTIC_USAGE_HINTS.get(name)
+        lines.append(f"  --{name}: {rendered};{f'  /* {hint} */' if hint else ''}")
 
 
 def serialize_tailwind_v3_css(layers: dict[str, dict[str, dict[str, str]]]) -> str:
@@ -206,7 +257,8 @@ def _theme_inline_block() -> list[str]:
         lines.append(comment)
         for group in groups:
             for key, value in color_map[group].items():
-                lines.append(f"  --color-{group}-{key}: {value};")
+                utility = f"{UTILITY_PREFIX[group]}-{group}-{key}"
+                lines.append(f"  --color-{group}-{key}: {value};  /* {utility} */")
     lines.append("}")
     return lines
 
