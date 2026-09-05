@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
 
 from chroma.color import parse_hex, rgb_to_hex
-from chroma.serializers import emit_tailwind, serialize_json
+from chroma.serializers import (
+    emit_css,
+    emit_dtcg,
+    emit_json,
+    emit_ts,
+    emit_tailwind,
+)
 from chroma.tokens import build_layers, verify_contrast
 
 
@@ -56,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "-f",
         "--format",
-        choices=("json", "tailwind"),
+        choices=("json", "tailwind", "css", "ts", "dtcg"),
         default="tailwind",
         help="The configuration file target standard (Default: tailwind)",
     )
@@ -79,14 +84,18 @@ def main(argv: list[str] | None = None) -> int:
         _report_accent(args.hex, layers)
 
     if args.format == "json":
-        payload = serialize_json(
-            layers, args.hex, preserve_vibrancy=args.preserve_vibrancy
+        emit_json(
+            layers,
+            args.hex,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
         )
-        if args.output:
-            Path(args.output).write_text(payload)
-            print(f"wrote {args.output}", file=sys.stderr)
-        else:
-            sys.stdout.write(payload)
+    elif args.format == "css":
+        emit_css(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "ts":
+        emit_ts(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+    elif args.format == "dtcg":
+        emit_dtcg(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     else:
         emit_tailwind(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
     return 0

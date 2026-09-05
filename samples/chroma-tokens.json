@@ -1,0 +1,185 @@
+{
+  "meta": {
+    "input": "6366f1",
+    "engine": "chroma.py 1.0.0",
+    "brand": {
+      "oklch": [
+        0.5854,
+        0.2041,
+        277.12
+      ],
+      "hsl": [
+        238.73,
+        0.8353,
+        0.6667
+      ]
+    },
+    "themes": [
+      "dark",
+      "light"
+    ],
+    "layers": [
+      "global",
+      "semantic"
+    ],
+    "preserve_vibrancy": false
+  },
+  "global": {
+    "dark": {
+      "step-1": "#0c0d12",
+      "step-2": "#111218",
+      "step-3": "#17181e",
+      "step-4": "#1c1e25",
+      "step-5": "#22242c",
+      "step-6": "#31333d",
+      "step-7": "#3f414c",
+      "step-8": "#545663",
+      "step-9": "#797b89",
+      "step-10": "#a0a3b3",
+      "step-11": "#cccfe1",
+      "step-12": "#eff2ff",
+      "accent": "#d7e8ff",
+      "accent-hover": "#d5e6ff",
+      "accent-active": "#daebff",
+      "accent-on": "#000000"
+    },
+    "light": {
+      "step-1": "#fbfcfe",
+      "step-2": "#f7f8fc",
+      "step-3": "#f4f5f9",
+      "step-4": "#f1f2f7",
+      "step-5": "#eff0f5",
+      "step-6": "#e9eaf0",
+      "step-7": "#dddee4",
+      "step-8": "#cacbd1",
+      "step-9": "#9c9ea4",
+      "step-10": "#717279",
+      "step-11": "#2d2e34",
+      "step-12": "#05050a",
+      "accent": "#d7e8ff",
+      "accent-hover": "#d5e6ff",
+      "accent-active": "#daebff",
+      "accent-on": "#000000"
+    }
+  },
+  "semantic": {
+    "dark": {
+      "bg-surface-root": "#0c0d12",
+      "bg-surface-default": "#111218",
+      "bg-surface-subtle": "#17181e",
+      "bg-surface-hover": "#1c1e25",
+      "bg-surface-active": "#22242c",
+      "border-subtle": "#31333d",
+      "border-default": "#3f414c",
+      "border-strong": "#545663",
+      "text-disabled": "#545663",
+      "text-muted": "#a0a3b3",
+      "text-secondary": "#cccfe1",
+      "text-primary": "#eff2ff",
+      "text-on-accent": "#000000",
+      "bg-action-primary": "#d7e8ff",
+      "bg-action-hover": "#d5e6ff",
+      "bg-action-active": "#daebff",
+      "bg-surface-overlay": "#3b3d45"
+    },
+    "light": {
+      "bg-surface-root": "#fbfcfe",
+      "bg-surface-default": "#f7f8fc",
+      "bg-surface-subtle": "#f4f5f9",
+      "bg-surface-hover": "#f1f2f7",
+      "bg-surface-active": "#eff0f5",
+      "border-subtle": "#e9eaf0",
+      "border-default": "#dddee4",
+      "border-strong": "#cacbd1",
+      "text-disabled": "#cacbd1",
+      "text-muted": "#717279",
+      "text-secondary": "#2d2e34",
+      "text-primary": "#05050a",
+      "text-on-accent": "#000000",
+      "bg-action-primary": "#d7e8ff",
+      "bg-action-hover": "#d5e6ff",
+      "bg-action-active": "#daebff",
+      "bg-surface-overlay": "#ffffff"
+    }
+  },
+  "oklch": {
+    "global": {
+      "dark": {
+        "step-1": "0.1604 0.0107 276.24",
+        "step-2": "0.1839 0.0124 277.68",
+        "step-3": "0.2107 0.0119 277.86",
+        "step-4": "0.2360 0.0138 272.74",
+        "step-5": "0.2617 0.0152 274.24",
+        "step-6": "0.3232 0.0179 276.43",
+        "step-7": "0.3777 0.0189 277.31",
+        "step-8": "0.4561 0.0212 278.60",
+        "step-9": "0.5860 0.0214 279.25",
+        "step-10": "0.7182 0.0234 277.34",
+        "step-11": "0.8577 0.0251 278.31",
+        "step-12": "0.9627 0.0177 275.64",
+        "accent": "0.9254 0.0363 255.95",
+        "accent-hover": "0.9200 0.0387 257.92",
+        "accent-active": "0.9335 0.0327 252.46",
+        "accent-on": "0.0000 0.0000 0.00"
+      },
+      "light": {
+        "step-1": "0.9909 0.0029 264.54",
+        "step-2": "0.9795 0.0054 274.97",
+        "step-3": "0.9705 0.0054 274.97",
+        "step-4": "0.9618 0.0068 277.16",
+        "step-5": "0.9558 0.0068 277.16",
+        "step-6": "0.9380 0.0081 278.63",
+        "step-7": "0.9016 0.0082 278.63",
+        "step-8": "0.8431 0.0083 278.61",
+        "step-9": "0.6995 0.0090 271.29",
+        "step-10": "0.5535 0.0108 279.53",
+        "step-11": "0.3026 0.0109 278.21",
+        "step-12": "0.1184 0.0137 284.11",
+        "accent": "0.9254 0.0363 255.95",
+        "accent-hover": "0.9200 0.0387 257.92",
+        "accent-active": "0.9335 0.0327 252.46",
+        "accent-on": "0.0000 0.0000 0.00"
+      }
+    },
+    "semantic": {
+      "dark": {
+        "bg-surface-root": "0.1604 0.0107 276.24",
+        "bg-surface-default": "0.1839 0.0124 277.68",
+        "bg-surface-subtle": "0.2107 0.0119 277.86",
+        "bg-surface-hover": "0.2360 0.0138 272.74",
+        "bg-surface-active": "0.2617 0.0152 274.24",
+        "border-subtle": "0.3232 0.0179 276.43",
+        "border-default": "0.3777 0.0189 277.31",
+        "border-strong": "0.4561 0.0212 278.60",
+        "text-disabled": "0.4561 0.0212 278.60",
+        "text-muted": "0.7182 0.0234 277.34",
+        "text-secondary": "0.8577 0.0251 278.31",
+        "text-primary": "0.9627 0.0177 275.64",
+        "text-on-accent": "0.0000 0.0000 0.00",
+        "bg-action-primary": "0.9254 0.0363 255.95",
+        "bg-action-hover": "0.9200 0.0387 257.92",
+        "bg-action-active": "0.9335 0.0327 252.46",
+        "bg-surface-overlay": "0.3612 0.0140 274.53"
+      },
+      "light": {
+        "bg-surface-root": "0.9909 0.0029 264.54",
+        "bg-surface-default": "0.9795 0.0054 274.97",
+        "bg-surface-subtle": "0.9705 0.0054 274.97",
+        "bg-surface-hover": "0.9618 0.0068 277.16",
+        "bg-surface-active": "0.9558 0.0068 277.16",
+        "border-subtle": "0.9380 0.0081 278.63",
+        "border-default": "0.9016 0.0082 278.63",
+        "border-strong": "0.8431 0.0083 278.61",
+        "text-disabled": "0.8431 0.0083 278.61",
+        "text-muted": "0.5535 0.0108 279.53",
+        "text-secondary": "0.3026 0.0109 278.21",
+        "text-primary": "0.1184 0.0137 284.11",
+        "text-on-accent": "0.0000 0.0000 0.00",
+        "bg-action-primary": "0.9254 0.0363 255.95",
+        "bg-action-hover": "0.9200 0.0387 257.92",
+        "bg-action-active": "0.9335 0.0327 252.46",
+        "bg-surface-overlay": "1.0000 0.0000 89.88"
+      }
+    }
+  }
+}

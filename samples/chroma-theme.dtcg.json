@@ -1,0 +1,200 @@
+{
+  "light": {
+    "bg": {
+      "surface": {
+        "root": {
+          "$value": "#fbfcfe",
+          "$type": "color",
+          "$description": "app canvas background"
+        },
+        "default": {
+          "$value": "#f7f8fc",
+          "$type": "color",
+          "$description": "layout panels & content cards"
+        },
+        "subtle": {
+          "$value": "#f4f5f9",
+          "$type": "color",
+          "$description": "form inputs, table cells, alt rows"
+        },
+        "hover": {
+          "$value": "#f1f2f7",
+          "$type": "color",
+          "$description": "grid row hover states"
+        },
+        "active": {
+          "$value": "#eff0f5",
+          "$type": "color",
+          "$description": "selected items, active nav tabs"
+        },
+        "overlay": {
+          "$value": "#ffffff",
+          "$type": "color",
+          "$description": "popovers, dropdowns, modals"
+        }
+      },
+      "action": {
+        "primary": {
+          "$value": "#d7e8ff",
+          "$type": "color",
+          "$description": "primary brand buttons"
+        },
+        "hover": {
+          "$value": "#d5e6ff",
+          "$type": "color",
+          "$description": "primary button hover"
+        },
+        "active": {
+          "$value": "#daebff",
+          "$type": "color",
+          "$description": "primary button pressed"
+        }
+      }
+    },
+    "border": {
+      "subtle": {
+        "$value": "#e9eaf0",
+        "$type": "color",
+        "$description": "grid-line cell dividers"
+      },
+      "default": {
+        "$value": "#dddee4",
+        "$type": "color",
+        "$description": "component boundary lines"
+      },
+      "strong": {
+        "$value": "#cacbd1",
+        "$type": "color",
+        "$description": "focus rings & active input outlines"
+      }
+    },
+    "text": {
+      "disabled": {
+        "$value": "#cacbd1",
+        "$type": "color",
+        "$description": "recessed inactive parameters"
+      },
+      "muted": {
+        "$value": "#717279",
+        "$type": "color",
+        "$description": "metadata, labels, table headers"
+      },
+      "secondary": {
+        "$value": "#2d2e34",
+        "$type": "color",
+        "$description": "body text & descriptive data"
+      },
+      "primary": {
+        "$value": "#05050a",
+        "$type": "color",
+        "$description": "critical numbers & main titles"
+      },
+      "on": {
+        "accent": {
+          "$value": "#000000",
+          "$type": "color",
+          "$description": "label/glyph on accent surfaces"
+        }
+      }
+    }
+  },
+  "dark": {
+    "bg": {
+      "surface": {
+        "root": {
+          "$value": "#0c0d12",
+          "$type": "color",
+          "$description": "app canvas background"
+        },
+        "default": {
+          "$value": "#111218",
+          "$type": "color",
+          "$description": "layout panels & content cards"
+        },
+        "subtle": {
+          "$value": "#17181e",
+          "$type": "color",
+          "$description": "form inputs, table cells, alt rows"
+        },
+        "hover": {
+          "$value": "#1c1e25",
+          "$type": "color",
+          "$description": "grid row hover states"
+        },
+        "active": {
+          "$value": "#22242c",
+          "$type": "color",
+          "$description": "selected items, active nav tabs"
+        },
+        "overlay": {
+          "$value": "#3b3d45",
+          "$type": "color",
+          "$description": "popovers, dropdowns, modals"
+        }
+      },
+      "action": {
+        "primary": {
+          "$value": "#d7e8ff",
+          "$type": "color",
+          "$description": "primary brand buttons"
+        },
+        "hover": {
+          "$value": "#d5e6ff",
+          "$type": "color",
+          "$description": "primary button hover"
+        },
+        "active": {
+          "$value": "#daebff",
+          "$type": "color",
+          "$description": "primary button pressed"
+        }
+      }
+    },
+    "border": {
+      "subtle": {
+        "$value": "#31333d",
+        "$type": "color",
+        "$description": "grid-line cell dividers"
+      },
+      "default": {
+        "$value": "#3f414c",
+        "$type": "color",
+        "$description": "component boundary lines"
+      },
+      "strong": {
+        "$value": "#545663",
+        "$type": "color",
+        "$description": "focus rings & active input outlines"
+      }
+    },
+    "text": {
+      "disabled": {
+        "$value": "#545663",
+        "$type": "color",
+        "$description": "recessed inactive parameters"
+      },
+      "muted": {
+        "$value": "#a0a3b3",
+        "$type": "color",
+        "$description": "metadata, labels, table headers"
+      },
+      "secondary": {
+        "$value": "#cccfe1",
+        "$type": "color",
+        "$description": "body text & descriptive data"
+      },
+      "primary": {
+        "$value": "#eff2ff",
+        "$type": "color",
+        "$description": "critical numbers & main titles"
+      },
+      "on": {
+        "accent": {
+          "$value": "#000000",
+          "$type": "color",
+          "$description": "label/glyph on accent surfaces"
+        }
+      }
+    }
+  }
+}

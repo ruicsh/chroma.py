@@ -1,4 +1,4 @@
-.PHONY: lint format typecheck test run check clean
+.PHONY: lint format typecheck test run check samples clean
 
 lint:
 	ruff check chroma/
@@ -14,6 +14,13 @@ test:
 
 run:
 	python3 -m chroma $(or $(filter-out $@,$(MAKECMDGOALS)),6366f1)
+
+samples:
+	python3 -m chroma 6366f1 -o samples/tailwind-v4.css
+	python3 -m chroma 6366f1 -f css -o samples/chroma.css
+	python3 -m chroma 6366f1 -f ts -o samples/chroma-theme.ts
+	python3 -m chroma 6366f1 -f dtcg -o samples/chroma-theme.dtcg.json
+	python3 -m chroma 6366f1 -f json -o samples/chroma-tokens.json
 
 %:
 	@true

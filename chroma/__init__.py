@@ -20,10 +20,17 @@ from chroma.color import (
     rgb_to_oklch,
 )
 from chroma.serializers import (
+    emit_css,
+    emit_dtcg,
+    emit_json,
+    emit_ts,
+    serialize_css,
+    serialize_dtcg,
     serialize_json,
     serialize_tailwind_v3_config,
     serialize_tailwind_v3_css,
     serialize_tailwind_v4_css,
+    serialize_ts,
 )
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
@@ -48,6 +55,10 @@ __all__ = [
     "accent_scale",
     "build_layers",
     "contrast_ratio",
+    "emit_css",
+    "emit_dtcg",
+    "emit_json",
+    "emit_ts",
     "hsl_to_rgb",
     "neutral_steps",
     "oklch_to_hex",
@@ -57,9 +68,12 @@ __all__ = [
     "rgb_to_hex",
     "rgb_to_hsl",
     "rgb_to_oklch",
+    "serialize_css",
+    "serialize_dtcg",
     "serialize_json",
     "serialize_tailwind_v3_config",
     "serialize_tailwind_v3_css",
     "serialize_tailwind_v4_css",
+    "serialize_ts",
     "verify_contrast",
 ]
