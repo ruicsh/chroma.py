@@ -34,34 +34,34 @@ When you feed a single hex code into the compiler, the calculation pipeline exec
 ```
 [ 1. GLOBAL TOKENS ]  ───►  [ 2. SEMANTIC TOKENS ]
    Raw Palette Options          Functional Meaning
-   (e.g. step-3, accent)        (e.g. bg-surface-default)
+   (e.g. neutral-scale-3, accent)        (e.g. bg-surface-default)
 ```
 
 ### 1. Global Tokens (the raw math)
 
-The literal palette output — the 12 neutral steps (`step-1` … `step-12`, chromatic grays at the locked brand hue), the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`), the **brand shade scale** (`brand-1` … `brand-12`, a 12-step chromatic ramp at the brand hue/chroma), the four **status coordinates** (`success`, `warning`, `danger`, `info` and their per-family hover/active/on solids) and the four **status shade scales** (`success-1…12`, `warning-1…12`, `danger-1…12`, `info-1…12`, one 12-step ramp per canonical hue).
+The literal palette output — the 12 neutral steps (`neutral-scale-1` … `neutral-scale-12`, chromatic grays at the locked brand hue), the brand accent (`accent`, `accent-hover`, `accent-active`, `accent-on`), the **brand shade scale** (`brand-scale-1` … `brand-scale-12`, a 12-step chromatic ramp at the brand hue/chroma), the four **status coordinates** (`success`, `warning`, `danger`, `info` and their per-family hover/active/on solids) and the four **status shade scales** (`success-1…12`, `warning-1…12`, `danger-1…12`, `info-1…12`, one 12-step ramp per canonical hue).
 
 ### 2. Semantic Tokens (functional intent → global)
 
-| Atmos semantic token | Resolves to     | Functional intent                                    |
-| :------------------- | :-------------- | :--------------------------------------------------- |
-| `bg-surface-root`    | `step-1`        | App canvas background / window                       |
-| `bg-surface-default` | `step-2`        | Primary layout panels and content cards              |
-| `bg-surface-subtle`  | `step-3`        | Form inputs, table cells, inactive text areas        |
-| `bg-surface-hover`   | `step-4`        | High-velocity grid row hover states                  |
-| `bg-surface-active`  | `step-5`        | Selected items, active navigation tabs               |
-| `bg-surface-overlay` | _(dedicated)_   | Floating layers: popovers, dropdowns, modals         |
-| `border-subtle`      | `step-6`        | Low-contrast grid-line cell dividers                 |
-| `border-default`     | `step-7`        | Structural component boundary lines                  |
-| `border-strong`      | `step-8`        | Focus states and active input outline rings          |
-| `text-disabled`      | `step-8`        | Recessed inactive parameters (matches input borders) |
-| `text-muted`         | `step-10`       | Metadata, labels, table headers                      |
-| `text-secondary`     | `step-11`       | Standard body text and descriptive data              |
-| `text-primary`       | `step-12`       | Critical numeric data cells and main titles          |
-| `text-on-accent`     | `accent-on`     | Label/glyph color rendered on accent surfaces        |
-| `bg-action-primary`  | `accent`        | Primary brand buttons and execution triggers         |
-| `bg-action-hover`    | `accent-hover`  | Hover states for primary interaction buttons         |
-| `bg-action-active`   | `accent-active` | Pressed state for primary interaction buttons        |
+| Atmos semantic token | Resolves to              | Functional intent                                    |
+| :------------------- | :----------------------- | :--------------------------------------------------- |
+| `bg-surface-root`    | `neutral-scale-1`        | App canvas background / window                       |
+| `bg-surface-default` | `neutral-scale-2`        | Primary layout panels and content cards              |
+| `bg-surface-subtle`  | `neutral-scale-3`        | Form inputs, table cells, inactive text areas        |
+| `bg-surface-hover`   | `neutral-scale-4`        | High-velocity grid row hover states                  |
+| `bg-surface-active`  | `neutral-scale-5`        | Selected items, active navigation tabs               |
+| `bg-surface-overlay` | _(dedicated)_            | Floating layers: popovers, dropdowns, modals         |
+| `border-subtle`      | `neutral-scale-6`        | Low-contrast grid-line cell dividers                 |
+| `border-default`     | `neutral-scale-7`        | Structural component boundary lines                  |
+| `border-strong`      | `neutral-scale-8`        | Focus states and active input outline rings          |
+| `text-foreground-disabled` | `neutral-scale-8`    | Recessed inactive parameters (matches input borders) |
+| `text-foreground-muted`    | `neutral-scale-10`   | Metadata, labels, table headers                      |
+| `text-foreground-secondary`| `neutral-scale-11`   | Standard body text and descriptive data              |
+| `text-foreground-primary`  | `neutral-scale-12`   | Critical numeric data cells and main titles          |
+| `text-on-accent`     | `accent-on`              | Label/glyph color rendered on accent surfaces        |
+| `bg-action-primary`  | `accent`                 | Primary brand buttons and execution triggers         |
+| `bg-action-hover`    | `accent-hover`           | Hover states for primary interaction buttons         |
+| `bg-action-active`   | `accent-active`          | Pressed state for primary interaction buttons        |
 
 The brand accent is **normalized**: its lightness is shifted (perceptually, hue/chroma preserved) until its on-color label clears strict WCAG AAA (≥7:1). Mid-bright brands keep their vivid color with a black label; very dark brands keep white. Hover/active vary **chroma** at the same lightness, so the AAA guarantee holds across interaction states. Actions reference the **brand accent**, not a neutral gray — neutral buttons blend into layout containers, while the brand coordinate acts as an unmistakable execution beacon.
 
@@ -71,10 +71,10 @@ With `--preserve-vibrancy`, the accent is instead **locked exactly** to the mark
 
 Following the article's [Step 2: Build your shade scales](https://atmos.style/blog/how-to-build-a-color-system-for-ui-design#step-2-build-your-shade-scales), chroma now builds a full 12-step shade scale for **every** colored family — not just neutrals. Each scale shares the neutral lightness ladder (monotonic OKLCH interpolation) but uses a family-specific chroma profile peaking mid-scale (vivid at step 6–7, muted at the ends) and scaled back ~10% in dark mode (Step 6: reduced saturation on dark).
 
-- **Brand scale** `brand-1…12` — brand hue + brand chroma (floor 0.01 so near-gray brands still tint).
+- **Brand scale** `brand-scale-1…12` — brand hue + brand chroma (floor 0.01 so near-gray brands still tint).
 - **Status scales** `success-1…12` / `warning-1…12` / `danger-1…12` / `info-1…12` — canonical hues/chromas independent of the brand.
 
-The article's 50–950 guide collapsed onto chroma's 1–12 Radix protocol (attributed below) now drives the preview ramps, the emitted `brand-*` / `{s}-*` CSS vars, and the Sass/Less/Stylus sections:
+The article's 50–950 guide collapsed onto chroma's 1–12 Radix protocol (attributed below) now drives the preview ramps, the emitted `brand-scale-*` / `{s}-*` CSS vars, and the Sass/Less/Stylus sections:
 
 | step | intent (chromatic & neutral) |
 | :--- | :--------------------------- |
@@ -105,7 +105,7 @@ The four semantic status families use **fixed canonical hues** — independent o
 | `text-{s}`            | `{s}-11`             | Status text on default surfaces      |
 | `text-on-{s}`         | `{s}-on`             | Label/glyph on status surfaces       |
 
-The solid's lightness is normalized so its on-color clears **WCAG AA (≥4.5:1)** against the solid and both interaction states (success/danger/info keep white labels on vivid dark solids; warning keeps a black label on amber) — this solid stays **AAA-solved, not scale-indexed** (the one intentional exception: no scale step at `brand-9`/`{s}-9` can both be vivid and clear AA in light mode without overshooting). The `subtle`/`border`/`text` scale steps flip lightness per theme — pale tints in light mode, dark tints in dark mode — while `text-{s}` (`{s}-11`) is verified ≥4.5:1 against every surface in both themes; any future brand that would short the bar falls back to a solved value with a CLI warning (B1 safety hatch).
+The solid's lightness is normalized so its on-color clears **WCAG AA (≥4.5:1)** against the solid and both interaction states (success/danger/info keep white labels on vivid dark solids; warning keeps a black label on amber) — this solid stays **AAA-solved, not scale-indexed** (the one intentional exception: no scale step at `brand-scale-9`/`{s}-9` can both be vivid and clear AA in light mode without overshooting). The `subtle`/`border`/`text` scale steps flip lightness per theme — pale tints in light mode, dark tints in dark mode — while `text-{s}` (`{s}-11`) is verified ≥4.5:1 against every surface in both themes; any future brand that would short the bar falls back to a solved value with a CLI warning (B1 safety hatch).
 
 ---
 
@@ -123,7 +123,7 @@ The solid's lightness is normalized so its on-color clears **WCAG AA (≥4.5:1)*
 | `-f tailwind-v3`                     | **Tailwind v3** `config.js` (+ companion `.css` when given `-o`); stdout carries the `config.js` only                                                          |
 | `-f tailwind` + any other name       | Treated as v3 config (`.js` + `.css` emitted)                                                                                                                  |
 
-The global ramps are emitted as **hex** (maximum browser compatibility); the semantic tokens chain through CSS custom properties (`--bg-surface-root: var(--step-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names. Each status family lands in the group that matches its role (`surface.success`, `foreground.success`, `border.success`, `on.success`):
+The global ramps are emitted as **hex** (maximum browser compatibility); the semantic tokens chain through CSS custom properties (`--bg-surface-root: var(--neutral-scale-1)`), so the raw global values remain the single source of truth. The CSS file exports **only** the global ramps and the semantic domains — no grids, inputs, or button aliases — and the Tailwind `colors` object exposes exactly those domains with utility-friendly names. Each status family lands in the group that matches its role (`surface.success`, `foreground.success`, `border.success`, `on.success`):
 
 | Token group  | Utility example                                                 |
 | :----------- | :-------------------------------------------------------------- |
@@ -233,13 +233,13 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
   --color-surface-active: var(--bg-surface-active); /* bg-surface-active */
   --color-surface-overlay: var(--bg-surface-overlay); /* bg-surface-overlay */
   /* Core Semantic Typography Layer */
-  --color-foreground-primary: var(--text-primary); /* text-foreground-primary */
+  --color-foreground-primary: var(--text-foreground-primary); /* text-foreground-primary */
   --color-foreground-secondary: var(
-    --text-secondary
+    --text-foreground-secondary
   ); /* text-foreground-secondary */
-  --color-foreground-muted: var(--text-muted); /* text-foreground-muted */
+  --color-foreground-muted: var(--text-foreground-muted); /* text-foreground-muted */
   --color-foreground-disabled: var(
-    --text-disabled
+    --text-foreground-disabled
   ); /* text-foreground-disabled */
   /* Core Semantic Boundary Layer */
   --color-border-subtle: var(--border-subtle); /* border-border-subtle */
@@ -254,18 +254,18 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
 
 :root {
   /* The 12-Step Mathematical Gray Ramp */
-  --step-1: #fbfcfe;
-  --step-2: #f7f8fc;
-  --step-3: #f4f5f9;
-  --step-4: #f1f2f7;
-  --step-5: #eff0f5;
-  --step-6: #e9eaf0;
-  --step-7: #dddee4;
-  --step-8: #cacbd1;
-  --step-9: #9c9ea4;
-  --step-10: #717279;
-  --step-11: #2d2e34;
-  --step-12: #05050a;
+  --neutral-scale-1: #fbfcfe;
+  --neutral-scale-2: #f7f8fc;
+  --neutral-scale-3: #f4f5f9;
+  --neutral-scale-4: #f1f2f7;
+  --neutral-scale-5: #eff0f5;
+  --neutral-scale-6: #e9eaf0;
+  --neutral-scale-7: #dddee4;
+  --neutral-scale-8: #cacbd1;
+  --neutral-scale-9: #9c9ea4;
+  --neutral-scale-10: #717279;
+  --neutral-scale-11: #2d2e34;
+  --neutral-scale-12: #05050a;
 
   /* The 10% High-Velocity Accent Coordinates */
   --accent: #d7e8ff; /* brand accent (AAA-normalized) */
@@ -274,18 +274,18 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
   --accent-on: #000000; /* auto on-color for accent */
 
   /* Semantic Structural Mapping Matrix */
-  --bg-surface-root: var(--step-1); /* app canvas background */
-  --bg-surface-default: var(--step-2); /* layout panels & content cards */
-  --bg-surface-subtle: var(--step-3); /* form inputs, table cells, alt rows */
-  --bg-surface-hover: var(--step-4); /* grid row hover states */
-  --bg-surface-active: var(--step-5); /* selected items, active nav tabs */
-  --border-subtle: var(--step-6); /* grid-line cell dividers */
-  --border-default: var(--step-7); /* component boundary lines */
-  --border-strong: var(--step-8); /* focus rings & active input outlines */
-  --text-disabled: var(--step-8); /* recessed inactive parameters */
-  --text-muted: var(--step-10); /* metadata, labels, table headers */
-  --text-secondary: var(--step-11); /* body text & descriptive data */
-  --text-primary: var(--step-12); /* critical numbers & main titles */
+  --bg-surface-root: var(--neutral-scale-1); /* app canvas background */
+  --bg-surface-default: var(--neutral-scale-2); /* layout panels & content cards */
+  --bg-surface-subtle: var(--neutral-scale-3); /* form inputs, table cells, alt rows */
+  --bg-surface-hover: var(--neutral-scale-4); /* grid row hover states */
+  --bg-surface-active: var(--neutral-scale-5); /* selected items, active nav tabs */
+  --border-subtle: var(--neutral-scale-6); /* grid-line cell dividers */
+  --border-default: var(--neutral-scale-7); /* component boundary lines */
+  --border-strong: var(--neutral-scale-8); /* focus rings & active input outlines */
+  --text-foreground-disabled: var(--neutral-scale-8); /* recessed inactive parameters */
+  --text-foreground-muted: var(--neutral-scale-10); /* metadata, labels, table headers */
+  --text-foreground-secondary: var(--neutral-scale-11); /* body text & descriptive data */
+  --text-foreground-primary: var(--neutral-scale-12); /* critical numbers & main titles */
   --text-on-accent: var(--accent-on); /* label/glyph on accent surfaces */
   --bg-action-primary: var(--accent); /* primary brand buttons */
   --bg-action-hover: var(--accent-hover); /* primary button hover */
@@ -295,18 +295,18 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
 
 .dark {
   /* The 12-Step Mathematical Gray Ramp */
-  --step-1: #0c0d12;
-  --step-2: #111218;
-  --step-3: #17181e;
-  --step-4: #1c1e25;
-  --step-5: #22242c;
-  --step-6: #31333d;
-  --step-7: #3f414c;
-  --step-8: #545663;
-  --step-9: #797b89;
-  --step-10: #a0a3b3;
-  --step-11: #cccfe1;
-  --step-12: #eff2ff;
+  --neutral-scale-1: #0c0d12;
+  --neutral-scale-2: #111218;
+  --neutral-scale-3: #17181e;
+  --neutral-scale-4: #1c1e25;
+  --neutral-scale-5: #22242c;
+  --neutral-scale-6: #31333d;
+  --neutral-scale-7: #3f414c;
+  --neutral-scale-8: #545663;
+  --neutral-scale-9: #797b89;
+  --neutral-scale-10: #a0a3b3;
+  --neutral-scale-11: #cccfe1;
+  --neutral-scale-12: #eff2ff;
 
   /* The 10% High-Velocity Accent Coordinates */
   --accent: #d7e8ff; /* brand accent (AAA-normalized) */
@@ -315,18 +315,18 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
   --accent-on: #000000; /* auto on-color for accent */
 
   /* Semantic Structural Mapping Matrix */
-  --bg-surface-root: var(--step-1); /* app canvas background */
-  --bg-surface-default: var(--step-2); /* layout panels & content cards */
-  --bg-surface-subtle: var(--step-3); /* form inputs, table cells, alt rows */
-  --bg-surface-hover: var(--step-4); /* grid row hover states */
-  --bg-surface-active: var(--step-5); /* selected items, active nav tabs */
-  --border-subtle: var(--step-6); /* grid-line cell dividers */
-  --border-default: var(--step-7); /* component boundary lines */
-  --border-strong: var(--step-8); /* focus rings & active input outlines */
-  --text-disabled: var(--step-8); /* recessed inactive parameters */
-  --text-muted: var(--step-10); /* metadata, labels, table headers */
-  --text-secondary: var(--step-11); /* body text & descriptive data */
-  --text-primary: var(--step-12); /* critical numbers & main titles */
+  --bg-surface-root: var(--neutral-scale-1); /* app canvas background */
+  --bg-surface-default: var(--neutral-scale-2); /* layout panels & content cards */
+  --bg-surface-subtle: var(--neutral-scale-3); /* form inputs, table cells, alt rows */
+  --bg-surface-hover: var(--neutral-scale-4); /* grid row hover states */
+  --bg-surface-active: var(--neutral-scale-5); /* selected items, active nav tabs */
+  --border-subtle: var(--neutral-scale-6); /* grid-line cell dividers */
+  --border-default: var(--neutral-scale-7); /* component boundary lines */
+  --border-strong: var(--neutral-scale-8); /* focus rings & active input outlines */
+  --text-foreground-disabled: var(--neutral-scale-8); /* recessed inactive parameters */
+  --text-foreground-muted: var(--neutral-scale-10); /* metadata, labels, table headers */
+  --text-foreground-secondary: var(--neutral-scale-11); /* body text & descriptive data */
+  --text-foreground-primary: var(--neutral-scale-12); /* critical numbers & main titles */
   --text-on-accent: var(--accent-on); /* label/glyph on accent surfaces */
   --bg-action-primary: var(--accent); /* primary brand buttons */
   --bg-action-hover: var(--accent-hover); /* primary button hover */
@@ -337,7 +337,7 @@ A sync test in the suite asserts every committed sample byte-matches fresh outpu
 
 Global hex values live in one place; everything else is an alias.
 
-Every token carries an inline **usage hint**: semantic and accent variables document where they should be used (`--bg-surface-root: var(--step-1);  /* app canvas background */`), and each `@theme` color shows the utility class it generates (`--color-surface-root: var(--bg-surface-root);  /* bg-surface-root */`).
+Every token carries an inline **usage hint**: semantic and accent variables document where they should be used (`--bg-surface-root: var(--neutral-scale-1);  /* app canvas background */`), and each `@theme` color shows the utility class it generates (`--color-surface-root: var(--bg-surface-root);  /* bg-surface-root */`).
 
 ### Comprehensive Integration Example
 
@@ -348,6 +348,35 @@ python3 -m chroma 10b981 --format json --output branding-tokens.json
 ```
 
 The `json` document has the shape `{ "meta": …, "global": {theme: {token: hex}}, "semantic": …, "oklch": {layer: {theme: {token: "L C H"}}} }`.
+
+---
+
+## Taxonomies (`-t` / `--taxonomy`)
+
+The OKLCH math and functional bindings are identical for every taxonomy — only the **emitted token names** change, applied through a pure two-tier rename (Tier 1 primitives, then Tier 2 semantic aliases). Pass `-t` to select the target framework (Default: `atmos`):
+
+| Taxonomy   | Neutral primitive        | Brand primitive            | Semantic example                                |
+| :--------- | :----------------------- | :------------------------- | :---------------------------------------------- |
+| `atmos`    | `neutral-scale-1…12`     | `brand-scale-1…12`         | `bg-surface-root`, `text-foreground-primary`    |
+| `m3`       | `ref-palette-neutral{10…95}` | `ref-palette-primary{10…95}` | `sys-color-surface-container-lowest`, `sys-color-on-surface` |
+| `atlassian`| `palette.neutral.10…120` | `palette.blue.10…120`      | `background.sunken`, `text.default`             |
+| `slds`     | `primitive-color-neutral-1…12` | `primitive-color-brand-1…12` | `color-neutral-base-10`, `color-brand-base-50` |
+| `spectrum` | `gray-100…1200`          | `blue-100…1200`            | `core-color-background-layer-lowest`, `core-color-content-primary` |
+
+For example:
+
+```bash
+python3 -m chroma 6366f1 -t m3 -f json     # Material 3 sys.color.* naming
+python3 -m chroma 6366f1 -t atlassian -f css   # Atlassian dot-notation (dots -> dashes in CSS)
+python3 -m chroma 6366f1 -t spectrum -f tailwind-v3
+```
+
+Notes:
+
+- **M3** maps the internal 1–12 steps onto the Material tonal-luminance ladder (step 1 → tone `10` … step 12 → tone `95`) via the `_to_m3_lum` helper.
+- **Atlassian** dot-notation tokens are rendered as dashed identifiers in CSS (`--background-elevation-surface`) while staying dotted in `json` / `ts` / `dtcg`.
+- The **preview** format embeds Atmos-named swatches, so `-t` must stay `atmos` for it; any other taxonomy renders through the token formats.
+- The M3/Atlassian/SLDS/Spectrum semantic tables use each framework's real token vocabulary for the specified anchors; where a framework ships fewer roles than chroma's concept matrix, the remaining names are systematic derivations (e.g. M3 status containers, Spectrum `core-color-content-on-{state}`).
 
 ---
 
@@ -368,7 +397,7 @@ The system ships a test suite that enforces its own contract:
 - Hex parsing (`#RRGGBB` / `RRGGBB` / `#RGB` / `RGB`) and OKLCH round-trip fidelity.
 - Monotonic 12-step lightness, surface lightness bands, and neutral chroma caps.
 - **Taxonomy integrity:** every semantic token resolves to its exact global source.
-- **WCAG AAA:** `text-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-secondary` ≥ 4.5:1 (AA).
+- **WCAG AAA:** `text-foreground-primary` vs every `bg-surface-*` ≥ 7:1, `text-on-accent` vs every `bg-action-*` state ≥ 7:1, and `text-foreground-secondary` ≥ 4.5:1 (AA).
 - Determinism: identical input → identical output.
 - **Multi-format output:** `css` (vanilla), `ts` (as-const module), `dtcg` (W3C), `figma` (native Figma Variables import), `sass`/`less`/`stylus` (native preprocessor maps) targets are covered by the suite, with committed samples kept byte-identical via a sync test.
 
@@ -440,7 +469,7 @@ python3 -m chroma 00ffff --preserve-vibrancy
 ### CLI reference
 
 ```bash
-usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg,figma,sass,less,stylus}] [--preserve-vibrancy] hex
+usage: chroma [-h] [-o OUTPUT] [-f {json,tailwind,tailwind-v3,css,ts,dtcg,figma,sass,less,stylus,preview}] [--preserve-vibrancy] [-t {atmos,m3,atlassian,slds,spectrum}] hex
 
 Systematic UI CLI Engine: Compile a complete dual-theme semantic token system
 from one brand color hex.
@@ -452,12 +481,14 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -o, --output OUTPUT   Output file path instead of writing to stdout
-  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg,figma,sass,less,stylus}
+  -f, --format {json,tailwind,tailwind-v3,css,ts,dtcg,figma,sass,less,stylus,preview}
                         The configuration file target standard (Default: tailwind)
   --preserve-vibrancy   Lock the brand accent exactly and solve the on-color
                         label for AAA instead of shifting accent lightness
                         (bright accents get an ultra-dark chromatic-gray label;
                         mid-bright brands fall back to normalization)
+  -t, --taxonomy {atmos,m3,atlassian,slds,spectrum}
+                        The target design-system token taxonomy (Default: atmos)
 ```
 
 ---
@@ -474,7 +505,7 @@ Or directly:
 python3 -m unittest discover -v -s chroma/tests
 ```
 
-All tests pass (73 test cases and counting).
+All tests pass (111 test cases and counting).
 
 ---
 
