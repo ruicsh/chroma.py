@@ -3,6 +3,13 @@
 The Tailwind formats emit the two theme tiers (global ramps + semantic
 intent) chained through CSS custom properties (semantic -> global), so
 swapping the raw global math re-themes the whole stack.
+
+Every serializer is taxonomy-aware: token names are resolved from the active
+``TaxonomySpec`` so the same engine can emit Atmos, Material 3, Atlassian,
+Salesforce SLDS, or Adobe Spectrum Core naming without changing the file
+format. The ``layers`` map passed in already carries the renamed keys; the
+serializers only need the taxonomy's delimiter and name lookups to group,
+alias, and camel-case correctly.
 """
 
 from __future__ import annotations
@@ -13,19 +20,25 @@ from pathlib import Path
 
 from chroma import __version__
 from chroma.color import parse_hex, rgb_to_hex, rgb_to_hsl, rgb_to_oklch
+from chroma.taxonomy import (
+    CANONICAL_GLOBAL,
+    CANONICAL_SEMANTIC,
+    TAXONOMIES,
+    get_taxonomy,
+)
 from chroma.tokens import (
-    BRAND_SCALE_NAMES,
-    SEMANTIC_TO_GLOBAL,
     STATUS_COORD_NAMES,
-    STATUS_FAMILIES,
+    STATUS_FAMILIES as _TOKENS_STATUS_FAMILIES,
     STATUS_SCALE_NAMES,
     THEMES,
+    semantic_to_global,
 )
 
 LAYERS = ("global", "semantic")
 
 # Usage hints emitted as comments so consumers can see where each token is
-# intended to be used without consulting the docs.
+# intended to be used without consulting the docs. Keyed by canonical concept
+# (taxonomy-independent), then renamed per the active taxonomy at render time.
 SEMANTIC_USAGE_HINTS: dict[str, str] = {
     "bg-surface-root": "app canvas background",
     "bg-surface-default": "layout panels & content cards",
@@ -36,17 +49,17 @@ SEMANTIC_USAGE_HINTS: dict[str, str] = {
     "border-subtle": "grid-line cell dividers",
     "border-default": "component boundary lines",
     "border-strong": "focus rings & active input outlines",
-    "text-disabled": "recessed inactive parameters",
-    "text-muted": "metadata, labels, table headers",
-    "text-secondary": "body text & descriptive data",
-    "text-primary": "critical numbers & main titles",
+    "text-foreground-disabled": "recessed inactive parameters",
+    "text-foreground-muted": "metadata, labels, table headers",
+    "text-foreground-secondary": "body text & descriptive data",
+    "text-foreground-primary": "critical numbers & main titles",
     "text-on-accent": "label/glyph on accent surfaces",
     "bg-action-primary": "primary brand buttons",
     "bg-action-hover": "primary button hover",
     "bg-action-active": "primary button pressed",
 }
 
-for _family in STATUS_FAMILIES:
+for _family in _TOKENS_STATUS_FAMILIES:
     SEMANTIC_USAGE_HINTS[f"bg-{_family}-subtle"] = (
         f"{_family} tinted surfaces (alerts, badges)"
     )
@@ -71,7 +84,7 @@ _STATUS_HINTS: dict[str, str] = {
 
 STATUS_USAGE_HINTS: dict[str, str] = {
     f"{family}{suffix}": f"{family} {meaning}"
-    for family in STATUS_FAMILIES
+    for family in _TOKENS_STATUS_FAMILIES
     for suffix, meaning in _STATUS_HINTS.items()
 }
 
@@ -93,109 +106,103 @@ GROUP_HINTS: dict[str, str] = {
     "action": "actions - brand execution buttons",
 }
 
-# Emission order for the Layer 2 semantic tokens in the ts / dtcg formats,
-# grouped by domain (surfaces, borders, foreground, actions). A fixed order
-# keeps output deterministic and greppable across runs.
-SEMANTIC_TOKEN_ORDER: tuple[str, ...] = (
-    "bg-surface-root",
-    "bg-surface-default",
-    "bg-surface-subtle",
-    "bg-surface-hover",
-    "bg-surface-active",
-    "bg-surface-overlay",
-    "border-subtle",
-    "border-default",
-    "border-strong",
-    "text-disabled",
-    "text-muted",
-    "text-secondary",
-    "text-primary",
-    "text-on-accent",
-    "bg-action-primary",
-    "bg-action-hover",
-    "bg-action-active",
-)
-
-for _family in STATUS_FAMILIES:
-    SEMANTIC_TOKEN_ORDER += (
-        f"bg-{_family}-subtle",
-        f"bg-{_family}-strong",
-        f"border-{_family}",
-        f"text-{_family}",
-        f"text-on-{_family}",
-    )
+# Canonical concept -> tailwind group member key (utility-friendly, stable
+# across taxonomies). Status family members use the internal family name as
+# the CSS utility (e.g. ``surface.success``) regardless of the target
+# framework's local status label.
 
 # Documented theme order (light first) for the ts / dtcg formats. The internal
 # ``layers`` map itself is keyed dark-first to match the pipeline iteration.
 _THEME_ORDER: tuple[str, ...] = ("light", "dark")
 
 
-def _camel_case(token: str) -> str:
-    """Map a kebab-case token name (``bg-surface-root``) to camelCase."""
-    head, *tail = token.split("-")
+def _spec(taxonomy: str):
+    return get_taxonomy(taxonomy)
+
+
+def _semantic_order(taxonomy: str) -> tuple[str, ...]:
+    spec = _spec(taxonomy)
+    return tuple(spec.semantic_name(c) for c in CANONICAL_SEMANTIC)
+
+
+def _css_name(name: str) -> str:
+    """Render a token name as a valid CSS custom-property identifier.
+
+    Dot-delimited taxonomies (Atlassian) are collapsed to dashes for CSS;
+    other taxonomies pass through unchanged.
+    """
+    return name.replace(".", "-")
+
+
+def _camel_case(token: str, delimiter: str = "-") -> str:
+    """Map a delimiter-separated token name to camelCase."""
+    parts = [p for p in token.split(delimiter) if p]
+    head, *tail = parts
     return head + "".join(part.capitalize() for part in tail)
 
 
-def _tailwind_color_map() -> dict[str, dict[str, str]]:
+# ---------------------------------------------------------------------------
+# Tailwind color map (taxonomy-aware)
+# ---------------------------------------------------------------------------
+
+
+def _tailwind_color_map(taxonomy: str = "atmos") -> dict[str, dict[str, str]]:
     """Nested Tailwind ``colors`` shape: group -> member -> CSS var.
 
-    Only the four core semantic domains are exposed. Group members are
-    utility-friendly (no ``bg-``/``text-``/``border-`` prefix), so e.g.
-    ``surface.root`` -> ``bg-surface-root`` and ``foreground.primary`` ->
-    ``text-foreground-primary`` (never ``text-text-primary``). Border colors
-    are the one accepted double prefix (``border-border-subtle``), matching
-    the shadcn convention.
+    Group members are utility-friendly role names (stable across taxonomies);
+    the ``var(--...)`` target resolves to the active taxonomy's semantic name.
     """
+    spec = _spec(taxonomy)
+
+    def slot(concept: str) -> str:
+        return f"var(--{_css_name(spec.semantic_name(concept))})"
+
+    surface_members = [
+        ("root", "bg-surface-root"),
+        ("default", "bg-surface-default"),
+        ("subtle", "bg-surface-subtle"),
+        ("hover", "bg-surface-hover"),
+        ("active", "bg-surface-active"),
+        ("overlay", "bg-surface-overlay"),
+    ]
+    for family in _TOKENS_STATUS_FAMILIES:
+        surface_members.append((f"{family}-subtle", f"bg-{family}-subtle"))
+        surface_members.append((family, f"bg-{family}-strong"))
+
+    foreground_members = [
+        ("primary", "text-foreground-primary"),
+        ("secondary", "text-foreground-secondary"),
+        ("muted", "text-foreground-muted"),
+        ("disabled", "text-foreground-disabled"),
+    ]
+    for family in _TOKENS_STATUS_FAMILIES:
+        foreground_members.append((family, f"text-{family}"))
+
+    border_members = [
+        ("subtle", "border-subtle"),
+        ("default", "border-default"),
+        ("strong", "border-strong"),
+    ]
+    for family in _TOKENS_STATUS_FAMILIES:
+        border_members.append((family, f"border-{family}"))
+
+    on_members = [("accent", "text-on-accent")]
+    for family in _TOKENS_STATUS_FAMILIES:
+        on_members.append((family, f"text-on-{family}"))
+
+    action_members = [
+        ("primary", "bg-action-primary"),
+        ("hover", "bg-action-hover"),
+        ("active", "bg-action-active"),
+    ]
+
     return {
-        "surface": {
-            "root": "var(--bg-surface-root)",
-            "default": "var(--bg-surface-default)",
-            "subtle": "var(--bg-surface-subtle)",
-            "hover": "var(--bg-surface-hover)",
-            "active": "var(--bg-surface-active)",
-            "overlay": "var(--bg-surface-overlay)",
-            **_status_group("bg-", ("subtle", "strong")),
-        },
-        "foreground": {
-            "primary": "var(--text-primary)",
-            "secondary": "var(--text-secondary)",
-            "muted": "var(--text-muted)",
-            "disabled": "var(--text-disabled)",
-            **_status_group("text-", ("",)),
-        },
-        "border": {
-            "subtle": "var(--border-subtle)",
-            "default": "var(--border-default)",
-            "strong": "var(--border-strong)",
-            **_status_group("border-", ("",)),
-        },
-        "on": {
-            "accent": "var(--text-on-accent)",
-            **_status_group("text-on-", ("",)),
-        },
-        "action": {
-            "primary": "var(--bg-action-primary)",
-            "hover": "var(--bg-action-hover)",
-            "active": "var(--bg-action-active)",
-        },
+        "surface": {key: slot(concept) for key, concept in surface_members},
+        "foreground": {key: slot(concept) for key, concept in foreground_members},
+        "border": {key: slot(concept) for key, concept in border_members},
+        "on": {key: slot(concept) for key, concept in on_members},
+        "action": {key: slot(concept) for key, concept in action_members},
     }
-
-
-def _status_group(prefix: str, suffixes: tuple[str, ...]) -> dict[str, str]:
-    """Map the four status families into a Tailwind group.
-
-    ``prefix`` is the semantic token prefix (``bg-``, ``text-``, ``border-``,
-    ``text-on-``) and ``suffixes`` the per-family members, so e.g.
-    ``surface.success`` -> ``var(--bg-success)`` and
-    ``surface.success-subtle`` -> ``var(--bg-success-subtle)``.
-    """
-    group: dict[str, str] = {}
-    for family in STATUS_FAMILIES:
-        for suffix in suffixes:
-            key = f"{family}-{suffix}" if suffix else family
-            var = f"--{prefix}{family}-{suffix}" if suffix else f"--{prefix}{family}"
-            group[key] = f"var({var})"
-    return group
 
 
 # ---------------------------------------------------------------------------
@@ -230,7 +237,9 @@ def _format_oklch(value: tuple[float, float, float]) -> str:
     return f"{lightness:.4f} {chroma:.4f} {hue:.2f}"
 
 
-def _meta(brand_hex: str, preserve_vibrancy: bool = False) -> dict:
+def _meta(
+    brand_hex: str, preserve_vibrancy: bool = False, taxonomy: str = "atmos"
+) -> dict:
     brand = parse_hex(brand_hex)
     lightness, chroma, hue = rgb_to_oklch(brand)
     hs, ss, ls = rgb_to_hsl(brand)
@@ -241,6 +250,9 @@ def _meta(brand_hex: str, preserve_vibrancy: bool = False) -> dict:
             "oklch": [round(lightness, 4), round(chroma, 4), round(hue, 2)],
             "hsl": [round(hs, 2), round(ss, 4), round(ls, 4)],
         },
+        "taxonomy": taxonomy,
+        "taxonomy_prefix": _spec(taxonomy).prefix,
+        "taxonomies": list(TAXONOMIES),
         "themes": list(THEMES),
         "layers": list(LAYERS),
         "preserve_vibrancy": preserve_vibrancy,
@@ -251,10 +263,11 @@ def serialize_json(
     layers: dict[str, dict[str, dict[str, str]]],
     brand_hex: str,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the three-tier token map as a JSON document."""
     payload = {
-        "meta": _meta(brand_hex, preserve_vibrancy),
+        "meta": _meta(brand_hex, preserve_vibrancy, taxonomy),
         **_transpose_layers(layers),
         "oklch": _oklch_map(layers),
     }
@@ -276,9 +289,9 @@ def _render_js_object(obj: dict[str, dict[str, str]], indent: str) -> str:
     return "\n".join(lines)
 
 
-def serialize_tailwind_v3_config() -> str:
+def serialize_tailwind_v3_config(taxonomy: str = "atmos") -> str:
     """Serialize a Tailwind v3 ``tailwind.config.js`` (colors -> CSS vars)."""
-    return f"""/* Generated by chroma.py v{__version__} — semantic theme config. */
+    return f"""/* Generated by chroma.py v{__version__} — semantic theme config ({taxonomy}). */
 /* Color utilities resolve to runtime CSS custom properties defined in the
    companion .css file (:root for light, .dark for dark). Only the four core
    semantic domains are exposed; the tiers are chained via var() (semantic ->
@@ -289,7 +302,7 @@ module.exports = {{
   theme: {{
     extend: {{
       colors: {{
-{_render_js_object(_tailwind_color_map(), "        ")}
+{_render_js_object(_tailwind_color_map(taxonomy), "        ")}
       }},
     }},
   }},
@@ -302,6 +315,7 @@ def _var_block(
     layers: dict[str, dict[str, dict[str, str]]],
     theme_name: str,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Emit CSS variables for the two theme tiers, chaining semantic -> global.
 
@@ -309,6 +323,10 @@ def _var_block(
     resolve through ``var()`` so swapping the raw math re-themes the entire
     stack.
     """
+    spec = _spec(taxonomy)
+    concept_by_name = {spec.semantic_name(c): c for c in CANONICAL_SEMANTIC}
+    global_tokens = layers[theme_name]["global"]
+
     lines.append("  /* The 12-Step Mathematical Gray Ramp */")
     accent_hint = (
         "brand accent (vibrancy-preserved)"
@@ -318,40 +336,50 @@ def _var_block(
     status_section_emitted = False
     brand_section_emitted = False
     status_scale_emitted = False
-    for name, value in layers[theme_name]["global"].items():
-        if name == "accent":
+    for canonical in CANONICAL_GLOBAL:
+        raw = spec.global_primitive(canonical)
+        name = _css_name(raw)
+        if canonical == "accent":
             lines.append("")
             lines.append("  /* The 10% High-Velocity Accent Coordinates */")
-        if name == BRAND_SCALE_NAMES[0] and not brand_section_emitted:
+        if canonical == "brand-1" and not brand_section_emitted:
             lines.append("")
             lines.append("  /* Brand Shade Scale — 12-step chromatic ramp */")
             brand_section_emitted = True
-        if name in STATUS_FAMILIES and not status_section_emitted:
+        if canonical in _TOKENS_STATUS_FAMILIES and not status_section_emitted:
             lines.append("")
             lines.append("  /* The Four Semantic Status Coordinates */")
             status_section_emitted = True
-        if name == STATUS_SCALE_NAMES[0] and not status_scale_emitted:
+        if canonical == f"{_TOKENS_STATUS_FAMILIES[0]}-1" and not status_scale_emitted:
             lines.append("")
             lines.append("  /* Status Shade Scales — 12-step per family */")
             status_scale_emitted = True
-        hint = ACCENT_USAGE_HINTS.get(name) or STATUS_USAGE_HINTS.get(name)
-        if name == "accent":
+        hint = ACCENT_USAGE_HINTS.get(canonical) or STATUS_USAGE_HINTS.get(canonical)
+        if canonical == "accent":
             hint = accent_hint
-        lines.append(f"  --{name}: {value};{f'  /* {hint} */' if hint else ''}")
+        lines.append(
+            f"  --{name}: {global_tokens[raw]};{f'  /* {hint} */' if hint else ''}"
+        )
     lines.append("")
     lines.append("  /* Semantic Structural Mapping Matrix */")
-    for name, value in layers[theme_name]["semantic"].items():
-        rendered = (
-            f"var(--{SEMANTIC_TO_GLOBAL[name]})"
-            if name in SEMANTIC_TO_GLOBAL
-            else value
+    semantic = layers[theme_name]["semantic"]
+    aliases = semantic_to_global(taxonomy)
+    for name, value in semantic.items():
+        concept = concept_by_name.get(name)
+        if concept is not None and concept != "bg-surface-overlay" and name in aliases:
+            rendered = f"var(--{_css_name(aliases[name])})"
+        else:
+            rendered = value
+        hint = SEMANTIC_USAGE_HINTS.get(concept) if concept is not None else None
+        lines.append(
+            f"  --{_css_name(name)}: {rendered};{f'  /* {hint} */' if hint else ''}"
         )
-        hint = SEMANTIC_USAGE_HINTS.get(name)
-        lines.append(f"  --{name}: {rendered};{f'  /* {hint} */' if hint else ''}")
 
 
 def serialize_css(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize raw, Tailwind-free CSS custom properties.
 
@@ -361,31 +389,33 @@ def serialize_css(
     ``var()``.
     """
     lines = [
-        f"/* Generated by chroma.py v{__version__} — semantic theme tokens. */",
+        f"/* Generated by chroma.py v{__version__} — semantic theme tokens ({taxonomy}). */",
         ":root {",
     ]
-    _var_block(lines, layers, "light", preserve_vibrancy)
+    _var_block(lines, layers, "light", preserve_vibrancy, taxonomy)
     lines.append("}")
     lines.append("")
     lines.append(".dark {")
-    _var_block(lines, layers, "dark", preserve_vibrancy)
+    _var_block(lines, layers, "dark", preserve_vibrancy, taxonomy)
     lines.append("}")
     lines.append("")
     return "\n".join(lines)
 
 
 def serialize_tailwind_v3_css(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the ``:root`` / ``.dark`` CSS variable definitions (v3 companion).
 
     Identical to :func:`serialize_css` — the Tailwind v3 companion file is the
     same raw variable sheet.
     """
-    return serialize_css(layers, preserve_vibrancy)
+    return serialize_css(layers, preserve_vibrancy, taxonomy)
 
 
-def _theme_inline_block() -> list[str]:
+def _theme_inline_block(taxonomy: str = "atmos") -> list[str]:
     """Render the Tailwind v4 ``@theme inline`` block over the four core domains."""
     lines = ["@theme inline {"]
     sections = (
@@ -394,7 +424,7 @@ def _theme_inline_block() -> list[str]:
         ("  /* Core Semantic Boundary Layer */", ("border",)),
         ("  /* Core High-Impact Action Layer */", ("on", "action")),
     )
-    color_map = _tailwind_color_map()
+    color_map = _tailwind_color_map(taxonomy)
     for comment, groups in sections:
         lines.append(comment)
         for group in groups:
@@ -406,22 +436,26 @@ def _theme_inline_block() -> list[str]:
 
 
 def serialize_tailwind_v4_css(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize a self-contained Tailwind v4 theme stylesheet (``@theme`` + vars)."""
-    lines = [f"/* Generated by chroma.py v{__version__} — semantic theme tokens. */"]
+    lines = [
+        f"/* Generated by chroma.py v{__version__} — semantic theme tokens ({taxonomy}). */"
+    ]
     lines += [
         "@import 'tailwindcss';",
         "",
         "@custom-variant dark (&:where(.dark, .dark *));",
         "",
-        *_theme_inline_block(),
+        *_theme_inline_block(taxonomy),
         "",
         ":root {",
     ]
-    _var_block(lines, layers, "light", preserve_vibrancy)
+    _var_block(lines, layers, "light", preserve_vibrancy, taxonomy)
     lines += ["}", "", ".dark {"]
-    _var_block(lines, layers, "dark", preserve_vibrancy)
+    _var_block(lines, layers, "dark", preserve_vibrancy, taxonomy)
     lines += ["}", ""]
     return "\n".join(lines)
 
@@ -430,13 +464,14 @@ def _emit_v3_files(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Write the Tailwind v3 ``config.js`` and its companion ``.css`` sheet."""
     path = Path(output)
     config = path if path.suffix == ".js" else path.with_suffix(".js")
     companion = config.with_suffix(".css")
-    config.write_text(serialize_tailwind_v3_config())
-    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy))
+    config.write_text(serialize_tailwind_v3_config(taxonomy))
+    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy, taxonomy))
     print(f"wrote {config}", file=sys.stderr)
     print(f"wrote {companion}", file=sys.stderr)
 
@@ -445,6 +480,7 @@ def emit_tailwind(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the tailwind format by output target.
 
@@ -453,20 +489,21 @@ def emit_tailwind(
     ``.css`` variable file.
     """
     if output is None:
-        sys.stdout.write(serialize_tailwind_v4_css(layers, preserve_vibrancy))
+        sys.stdout.write(serialize_tailwind_v4_css(layers, preserve_vibrancy, taxonomy))
         return
     path = Path(output)
     if path.suffix == ".css":
-        path.write_text(serialize_tailwind_v4_css(layers, preserve_vibrancy))
+        path.write_text(serialize_tailwind_v4_css(layers, preserve_vibrancy, taxonomy))
         print(f"wrote {path}", file=sys.stderr)
         return
-    _emit_v3_files(layers, output, preserve_vibrancy)
+    _emit_v3_files(layers, output, preserve_vibrancy, taxonomy)
 
 
 def emit_tailwind_v3(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the tailwind-v3 format by output target.
 
@@ -475,14 +512,14 @@ def emit_tailwind_v3(
     the companion is noted on stderr.
     """
     if output is None:
-        sys.stdout.write(serialize_tailwind_v3_config())
+        sys.stdout.write(serialize_tailwind_v3_config(taxonomy))
         print(
             "companion variable sheet not shown on stdout; pass -o <path> to "
             "write both tailwind.config.js and tailwind.config.css",
             file=sys.stderr,
         )
         return
-    _emit_v3_files(layers, output, preserve_vibrancy)
+    _emit_v3_files(layers, output, preserve_vibrancy, taxonomy)
 
 
 # ---------------------------------------------------------------------------
@@ -491,7 +528,9 @@ def emit_tailwind_v3(
 
 
 def serialize_ts(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the semantic palette as an immutable TypeScript module.
 
@@ -499,16 +538,18 @@ def serialize_ts(
     derived ``ChromaTheme`` type, so analytical dashboards and chart/component
     styling get compile-time-safe access to flat hex tokens.
     """
+    spec = _spec(taxonomy)
+    order = _semantic_order(taxonomy)
     blocks = []
     for theme_name in _THEME_ORDER:
         semantic = layers[theme_name]["semantic"]
         body = "\n".join(
-            f"    {_camel_case(name)}: '{semantic[name]}',"
-            for name in SEMANTIC_TOKEN_ORDER
+            f"    {_camel_case(name, spec.delimiter)}: '{semantic[name]}',"
+            for name in order
         )
         blocks.append(f"  {theme_name}: {{\n{body}\n  }},")
     lines = [
-        f"/* Generated by chroma.py v{__version__} — semantic theme tokens. */",
+        f"/* Generated by chroma.py v{__version__} — semantic theme tokens ({taxonomy}). */",
         "/* Flat semantic palette. */",
         "export const chromaTheme = {",
         *blocks,
@@ -525,16 +566,52 @@ def serialize_ts(
 # ---------------------------------------------------------------------------
 
 
-def _dtcg_tree(semantic: dict[str, str]) -> dict[str, object]:
+def _dtcg_leaf(value: str, hint: str) -> dict[str, object]:
+    return {"$value": value, "$type": "color", "$description": hint}
+
+
+def _has_prefix_collision(names: list[str], delimiter: str) -> bool:
+    """True if any name is a strict delimiter-prefix of another name.
+
+    When that happens a nested tree would need a node to be both a token leaf
+    and a group, which DTCG cannot represent — so the caller falls back to a
+    flat token map to avoid silently dropping tokens.
+    """
+    prefix_set = set()
+    for name in names:
+        segments = name.split(delimiter)
+        for depth in range(1, len(segments)):
+            prefix_set.add(delimiter.join(segments[:depth]))
+    return any(name in prefix_set for name in names)
+
+
+def _dtcg_tree(semantic: dict[str, str], taxonomy: str) -> dict[str, object]:
     """Nest semantic tokens into a DTCG tree keyed by their dashed path.
 
     Each ``bg-surface-root`` token becomes ``bg -> surface -> root`` with a
     ``$value`` / ``$type`` / ``$description`` leaf, ready for W3C DTCG tooling
-    (e.g. Style Dictionary).
+    (e.g. Style Dictionary). Paths split on the taxonomy's delimiter.
+
+    When a taxonomy's semantic names are not a prefix-free hierarchy (e.g. M3's
+    ``sys-color-primary`` vs ``sys-color-primary-container``), nesting would
+    force a node to be both a token and a group — which DTCG cannot represent —
+    so the tree falls back to a flat ``name -> leaf`` map. Every token is always
+    emitted regardless of the shape.
     """
+    spec = _spec(taxonomy)
+    order = _semantic_order(taxonomy)
+    concept_by_name = {spec.semantic_name(c): c for c in CANONICAL_SEMANTIC}
+
+    def hint_for(name: str) -> str:
+        concept = concept_by_name.get(name)
+        return SEMANTIC_USAGE_HINTS.get(concept, "") if concept is not None else ""
+
+    if _has_prefix_collision(list(order), spec.delimiter):
+        return {name: _dtcg_leaf(semantic[name], hint_for(name)) for name in order}
+
     tree: dict[str, object] = {}
-    for name in SEMANTIC_TOKEN_ORDER:
-        parts = name.split("-")
+    for name in order:
+        parts = [p for p in name.split(spec.delimiter) if p]
         node: dict[str, object] = tree
         for part in parts[:-1]:
             child = node.get(part)
@@ -542,16 +619,14 @@ def _dtcg_tree(semantic: dict[str, str]) -> dict[str, object]:
                 child = {}
                 node[part] = child
             node = child
-        node[parts[-1]] = {
-            "$value": semantic[name],
-            "$type": "color",
-            "$description": SEMANTIC_USAGE_HINTS[name],
-        }
+        node[parts[-1]] = _dtcg_leaf(semantic[name], hint_for(name))
     return tree
 
 
 def serialize_dtcg(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the semantic palette as a W3C DTCG JSON document.
 
@@ -559,7 +634,7 @@ def serialize_dtcg(
     keys; every token leaf carries ``$value``, ``$type`` and ``$description``.
     """
     payload = {
-        theme_name: _dtcg_tree(layers[theme_name]["semantic"])
+        theme_name: _dtcg_tree(layers[theme_name]["semantic"], taxonomy)
         for theme_name in _THEME_ORDER
     }
     return json.dumps(payload, indent=2) + "\n"
@@ -578,23 +653,29 @@ def serialize_figma_mode(
     layers: dict[str, dict[str, dict[str, str]]],
     theme_name: str,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize one theme as a single-mode Figma-native DTCG document.
 
     Figma's native "Import into Variables" consumes DTCG JSON where one file
     is one mode: a new mode is created for each dropped file and variables are
     created only for tokens present (with the same ``$type``) in every file.
-    Each mode therefore carries the full semantic tree (``bg.surface.root``,
-    ``text.on.accent``, ...) with that theme's resolved hex values.
+    Each mode therefore carries the full semantic tree with that theme's
+    resolved hex values.
     """
-    return json.dumps(_dtcg_tree(layers[theme_name]["semantic"]), indent=2) + "\n"
+    return (
+        json.dumps(_dtcg_tree(layers[theme_name]["semantic"], taxonomy), indent=2)
+        + "\n"
+    )
 
 
 def serialize_figma(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the light-mode document (the single file stdout carries)."""
-    return serialize_figma_mode(layers, "light", preserve_vibrancy)
+    return serialize_figma_mode(layers, "light", preserve_vibrancy, taxonomy)
 
 
 def _figma_target(output: str, theme_name: str) -> Path:
@@ -613,6 +694,7 @@ def emit_figma(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the figma format by output target.
 
@@ -622,7 +704,7 @@ def emit_figma(
     with two modes.
     """
     if output is None:
-        sys.stdout.write(serialize_figma(layers, preserve_vibrancy))
+        sys.stdout.write(serialize_figma(layers, preserve_vibrancy, taxonomy))
         print(
             "dark mode not shown on stdout; pass -o <stem>.json to write "
             "<stem>.light.json and <stem>.dark.json for the Figma Variables panel",
@@ -631,7 +713,9 @@ def emit_figma(
         return
     for theme_name in _THEME_ORDER:
         path = _figma_target(output, theme_name)
-        path.write_text(serialize_figma_mode(layers, theme_name, preserve_vibrancy))
+        path.write_text(
+            serialize_figma_mode(layers, theme_name, preserve_vibrancy, taxonomy)
+        )
         print(f"wrote {path}", file=sys.stderr)
 
 
@@ -654,41 +738,48 @@ _MAP_ROOT = "chroma-theme"
 
 def _token_sections(
     layers: dict[str, dict[str, dict[str, str]]],
+    taxonomy: str = "atmos",
 ) -> list[tuple[str, list[tuple[str, dict[str, str]]]]]:
     """Ordered (theme, [(heading, tokens)]) sections for map serialization.
 
     Within a theme the global ramp, then the accent, then the semantic tokens
     each carry their own heading, mirroring the css ``_var_block`` structure.
     """
+    spec = _spec(taxonomy)
     sections: list[tuple[str, list[tuple[str, dict[str, str]]]]] = []
     for theme_name in _THEME_ORDER:
         global_tokens = layers[theme_name]["global"]
+
+        def gname(canonical: str) -> str:
+            return spec.global_primitive(canonical)
+
         ramp = {
-            name: value
-            for name, value in global_tokens.items()
-            if name.startswith("step-")
+            gname(f"step-{step}"): global_tokens[gname(f"step-{step}")]
+            for step in range(1, 13)
         }
         accent = {
-            name: value
-            for name, value in global_tokens.items()
-            if name.startswith("accent")
+            name: global_tokens[name]
+            for name in ("accent", "accent-hover", "accent-active", "accent-on")
+            if name in global_tokens
         }
         brand = {
-            name: value
-            for name, value in global_tokens.items()
-            if name in BRAND_SCALE_NAMES
+            gname(f"brand-{step}"): global_tokens[gname(f"brand-{step}")]
+            for step in range(1, 13)
         }
         status_coords = {
-            name: value
-            for name, value in global_tokens.items()
-            if name in STATUS_COORD_NAMES
+            name: global_tokens[name]
+            for name in STATUS_COORD_NAMES
+            if name in global_tokens
         }
         status_scales = {
-            name: value
-            for name, value in global_tokens.items()
-            if name in STATUS_SCALE_NAMES
+            name: global_tokens[name]
+            for name in STATUS_SCALE_NAMES
+            if name in global_tokens
         }
-        semantic = layers[theme_name]["semantic"]
+        semantic = {
+            spec.semantic_name(c): layers[theme_name]["semantic"][spec.semantic_name(c)]
+            for c in CANONICAL_SEMANTIC
+        }
         sections.append(
             (
                 theme_name,
@@ -706,20 +797,26 @@ def _token_sections(
 
 
 def serialize_sass(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the theme as a nested Sass map (``$chroma-theme``).
 
     Light and dark themes are keys of a top-level map; each holds the global
     ramps + accent and the semantic tokens, all resolved to concrete hex.
     """
-    lines = [f"// Generated by chroma.py v{__version__} — semantic theme tokens."]
+    lines = [
+        f"// Generated by chroma.py v{__version__} — semantic theme tokens ({taxonomy})."
+    ]
     lines.append(f"${_MAP_ROOT}: (")
-    for theme_name, theme_sections in _token_sections(layers):
+    for theme_name, theme_sections in _token_sections(layers, taxonomy):
         lines.append(f"  {theme_name}: (")
         for heading, tokens in theme_sections:
             lines.append(f"    // {heading}")
-            lines.extend(f"    {name}: {value}," for name, value in tokens.items())
+            lines.extend(
+                f"    {_css_name(name)}: {value}," for name, value in tokens.items()
+            )
         lines.append("  ),")
     lines.append(");")
     lines.append("")
@@ -727,20 +824,26 @@ def serialize_sass(
 
 
 def serialize_less(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the theme as a nested Less map (``@chroma-theme``, Less >= 3.5).
 
     Light and dark themes are ``@key`` entries of a top-level map; each holds
     the global ramps + accent and the semantic tokens, all in concrete hex.
     """
-    lines = [f"// Generated by chroma.py v{__version__} — semantic theme tokens."]
+    lines = [
+        f"// Generated by chroma.py v{__version__} — semantic theme tokens ({taxonomy})."
+    ]
     lines.append(f"@{_MAP_ROOT}: {{")
-    for theme_name, theme_sections in _token_sections(layers):
+    for theme_name, theme_sections in _token_sections(layers, taxonomy):
         lines.append(f"  @{theme_name}: {{")
         for heading, tokens in theme_sections:
             lines.append(f"    // {heading}")
-            lines.extend(f"    @{name}: {value};" for name, value in tokens.items())
+            lines.extend(
+                f"    @{_css_name(name)}: {value};" for name, value in tokens.items()
+            )
         lines.append("  };")
     lines.append("};")
     lines.append("")
@@ -748,7 +851,9 @@ def serialize_less(
 
 
 def serialize_stylus(
-    layers: dict[str, dict[str, dict[str, str]]], preserve_vibrancy: bool = False
+    layers: dict[str, dict[str, dict[str, str]]],
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize the theme as a Stylus hash (``chroma-theme``).
 
@@ -756,13 +861,17 @@ def serialize_stylus(
     ramps + accent and the semantic tokens, all in concrete hex. Keys are
     quoted so the ``-N`` step suffixes parse unambiguously.
     """
-    lines = [f"// Generated by chroma.py v{__version__} — semantic theme tokens."]
+    lines = [
+        f"// Generated by chroma.py v{__version__} — semantic theme tokens ({taxonomy})."
+    ]
     lines.append(f"{_MAP_ROOT} = {{")
-    for theme_name, theme_sections in _token_sections(layers):
+    for theme_name, theme_sections in _token_sections(layers, taxonomy):
         lines.append(f"  {theme_name}: {{")
         for heading, tokens in theme_sections:
             lines.append(f"    // {heading}")
-            lines.extend(f"    '{name}': {value}," for name, value in tokens.items())
+            lines.extend(
+                f"    '{_css_name(name)}': {value}," for name, value in tokens.items()
+            )
         lines.append("  },")
     lines.append("}")
     lines.append("")
@@ -782,6 +891,7 @@ def serialize_preview(
     layers: dict[str, dict[str, dict[str, str]]],
     brand_hex: str,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> str:
     """Serialize a self-contained HTML preview for the theme.
 
@@ -790,7 +900,15 @@ def serialize_preview(
     so the compiled tokens can be visually verified in a browser. The
     preview is theme-aware via a light/dark toggle and uses only the
     generated tokens (no external assets).
+
+    The embedded swatches and ramp are hard-coded to the baseline Atmos
+    naming, so the preview is only meaningful for ``taxonomy == "atmos"``.
     """
+    if taxonomy != "atmos":
+        raise ValueError(
+            f"preview only supports the 'atmos' taxonomy, got {taxonomy!r}; "
+            "render token formats (json / css / tailwind / ...) for other taxonomies."
+        )
     # Canonical brand hex for display (e.g., "#6366f1").
     brand_hex_canonical = rgb_to_hex(parse_hex(brand_hex))
     normalized = brand_hex_canonical.lower()
@@ -802,7 +920,7 @@ def serialize_preview(
         "<head>\n"
         '<meta charset="UTF-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
-        f"<title>chroma — {title_part} Color System Preview</title>\n"
+        f"<title>chroma — {title_part} Color System Preview ({taxonomy})</title>\n"
         "<style>\n"
     )
     suffix = _PREVIEW_SUFFIX
@@ -813,7 +931,7 @@ def serialize_preview(
             "chroma \u2014 Default Color System",
             f"chroma \u2014 {brand_hex_canonical} Color System",
         )
-    css_block = serialize_css(layers, preserve_vibrancy).strip()
+    css_block = serialize_css(layers, preserve_vibrancy, taxonomy).strip()
     return prefix + css_block + suffix
 
 
@@ -822,9 +940,12 @@ def emit_preview(
     output: str | None,
     brand_hex: str,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the preview format by output target."""
-    _emit_text(serialize_preview(layers, brand_hex, preserve_vibrancy), output)
+    _emit_text(
+        serialize_preview(layers, brand_hex, preserve_vibrancy, taxonomy), output
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -847,60 +968,67 @@ def emit_json(
     brand_hex: str,
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the json format by output target."""
-    _emit_text(serialize_json(layers, brand_hex, preserve_vibrancy), output)
+    _emit_text(serialize_json(layers, brand_hex, preserve_vibrancy, taxonomy), output)
 
 
 def emit_css(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the css format by output target."""
-    _emit_text(serialize_css(layers, preserve_vibrancy), output)
+    _emit_text(serialize_css(layers, preserve_vibrancy, taxonomy), output)
 
 
 def emit_ts(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the ts format by output target."""
-    _emit_text(serialize_ts(layers, preserve_vibrancy), output)
+    _emit_text(serialize_ts(layers, preserve_vibrancy, taxonomy), output)
 
 
 def emit_dtcg(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the dtcg format by output target."""
-    _emit_text(serialize_dtcg(layers, preserve_vibrancy), output)
+    _emit_text(serialize_dtcg(layers, preserve_vibrancy, taxonomy), output)
 
 
 def emit_sass(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the sass format by output target."""
-    _emit_text(serialize_sass(layers, preserve_vibrancy), output)
+    _emit_text(serialize_sass(layers, preserve_vibrancy, taxonomy), output)
 
 
 def emit_less(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the less format by output target."""
-    _emit_text(serialize_less(layers, preserve_vibrancy), output)
+    _emit_text(serialize_less(layers, preserve_vibrancy, taxonomy), output)
 
 
 def emit_stylus(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
     preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> None:
     """Resolve the stylus format by output target."""
-    _emit_text(serialize_stylus(layers, preserve_vibrancy), output)
+    _emit_text(serialize_stylus(layers, preserve_vibrancy, taxonomy), output)

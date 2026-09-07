@@ -16,6 +16,7 @@ from chroma.serializers import (
     serialize_figma_mode,
     serialize_json,
     serialize_less,
+    serialize_preview,
     serialize_sass,
     serialize_stylus,
     serialize_tailwind_v3_config,
@@ -56,9 +57,9 @@ class TestCssFormat(unittest.TestCase):
         self.assertNotIn("@custom-variant", text)
         self.assertIn(":root {", text)
         self.assertIn(".dark {", text)
-        light_step_1 = build_layers(BRAND)["light"]["global"]["step-1"]
-        self.assertIn(f"--step-1: {light_step_1};", text)
-        self.assertIn("--bg-surface-root: var(--step-1);", text)
+        light_step_1 = build_layers(BRAND)["light"]["global"]["neutral-scale-1"]
+        self.assertIn(f"--neutral-scale-1: {light_step_1};", text)
+        self.assertIn("--bg-surface-root: var(--neutral-scale-1);", text)
 
     def test_css_to_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -72,6 +73,22 @@ class TestCssFormat(unittest.TestCase):
             self.assertIn(":root {", text)
             self.assertIn(".dark {", text)
             self.assertIn("wrote", err.getvalue())
+
+
+class TestPreviewFormat(unittest.TestCase):
+    def test_preview_atmos_renders(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main([BRAND, "-f", "preview"])
+        self.assertEqual(code, 0)
+        self.assertIn("<!DOCTYPE html>", out.getvalue())
+
+    def test_preview_rejects_non_atmos(self):
+        from chroma import build_layers as _build
+
+        layers = _build(BRAND, taxonomy="m3")
+        with self.assertRaises(ValueError):
+            serialize_preview(layers, BRAND, taxonomy="m3")
 
 
 class TestTsFormat(unittest.TestCase):
@@ -106,7 +123,7 @@ class TestTsFormat(unittest.TestCase):
             code = main([BRAND])
         self.assertEqual(code, 0)
         dark_tw = tw_out.getvalue().split(".dark {", 1)[1]
-        step = re.search(r"--step-1: (#[0-9a-f]{6});", dark_tw)
+        step = re.search(r"--neutral-scale-1: (#[0-9a-f]{6});", dark_tw)
         self.assertIsNotNone(step)
         assert step is not None
         self.assertEqual(step.group(1), expected)
@@ -148,6 +165,24 @@ class TestDtcgFormat(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(out.getvalue())
         self.assertIn("bg", payload["dark"])
+
+    def test_dtcg_emits_all_tokens_for_every_taxonomy(self):
+        from chroma import TAXONOMIES
+
+        for taxonomy in TAXONOMIES:
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = main([BRAND, "-f", "dtcg", "-t", taxonomy])
+            self.assertEqual(code, 0)
+            payload = json.loads(out.getvalue())
+            semantic_count = len(
+                build_layers(BRAND, taxonomy=taxonomy)["light"]["semantic"]
+            )
+            for theme_name in ("light", "dark"):
+                with self.subTest(taxonomy=taxonomy, theme=theme_name):
+                    self.assertEqual(
+                        _count_token_leaves(payload[theme_name]), semantic_count
+                    )
 
     def test_dtcg_tree_has_exact_semantic_domains(self):
         out = io.StringIO()
@@ -281,7 +316,7 @@ class TestSassFormat(unittest.TestCase):
         self.assertIn("  dark: (", text)
         self.assertIn("// The 12-Step Mathematical Gray Ramp", text)
         self.assertIn("// Semantic Structural Mapping Matrix", text)
-        self.assertIn("step-1: #fbfcfe,", text)
+        self.assertIn("neutral-scale-1: #fbfcfe,", text)
         self.assertIn("bg-surface-root: #fbfcfe,", text)
 
     def test_sass_values_match_layers(self):
@@ -317,7 +352,7 @@ class TestLessFormat(unittest.TestCase):
         self.assertIn("  @light: {", text)
         self.assertIn("  @dark: {", text)
         self.assertIn("// Semantic Structural Mapping Matrix", text)
-        self.assertIn("@step-1: #fbfcfe;", text)
+        self.assertIn("@neutral-scale-1: #fbfcfe;", text)
         self.assertIn("@bg-surface-root: #fbfcfe;", text)
 
     def test_less_values_match_layers(self):
@@ -353,7 +388,7 @@ class TestStylusFormat(unittest.TestCase):
         self.assertIn("  light: {", text)
         self.assertIn("  dark: {", text)
         self.assertIn("// Semantic Structural Mapping Matrix", text)
-        self.assertIn("'step-1': #fbfcfe,", text)
+        self.assertIn("'neutral-scale-1': #fbfcfe,", text)
         self.assertIn("'bg-surface-root': #fbfcfe,", text)
 
     def test_stylus_values_match_layers(self):
@@ -376,6 +411,48 @@ class TestStylusFormat(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertIn("chroma-theme = {", target.read_text())
             self.assertIn("wrote", err.getvalue())
+
+
+class TestPreprocessorDotSanitization(unittest.TestCase):
+    """Dot-delimited taxonomies (atlassian) must emit dashed, parseable keys."""
+
+    FORMATS = ("sass", "less", "stylus")
+
+    def _emit(self, fmt: str) -> str:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main([BRAND, "-t", "atlassian", "-f", fmt])
+        self.assertEqual(code, 0)
+        return out.getvalue()
+
+    def test_dotted_names_become_dashed(self):
+        for fmt in self.FORMATS:
+            with self.subTest(fmt=fmt):
+                text = self._emit(fmt)
+                self.assertIn("palette-neutral-10", text)
+                self.assertIn("background-elevation-surface", text)
+                self.assertIn("text-default", text)
+
+    def test_no_dotted_keys(self):
+        for fmt in self.FORMATS:
+            with self.subTest(fmt=fmt):
+                text = self._emit(fmt)
+                for token in (
+                    "palette.neutral.10",
+                    "background.elevation.surface",
+                    "text.default",
+                    "border.subtle",
+                ):
+                    self.assertNotIn(token, text)
+
+    def test_atmos_unchanged(self):
+        for fmt in self.FORMATS:
+            with self.subTest(fmt=fmt):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    code = main([BRAND, "-f", fmt])
+                self.assertEqual(code, 0)
+                self.assertIn("neutral-scale-1", out.getvalue())
 
 
 class TestStatusFormats(unittest.TestCase):

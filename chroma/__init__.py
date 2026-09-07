@@ -1,8 +1,10 @@
 """chroma.py — deterministic semantic theme generation for enterprise frontends.
 
 Weave a complete, dual-theme (Light/Dark) semantic token configuration from a
-single structural brand hue coordinate, compiled in OKLCH across two Atmos
-tiers: global (raw math) and semantic (functional intent).
+single structural brand hue coordinate, compiled in OKLCH across two tiers:
+global (raw math) and semantic (functional intent). The same engine emits the
+tokens under the naming of any supported design framework (Atmos, Material 3,
+Atlassian, Salesforce SLDS, Adobe Spectrum Core) via the ``-t`` taxonomy flag.
 """
 
 __version__ = "1.2.0"
@@ -42,9 +44,19 @@ from chroma.serializers import (
     serialize_tailwind_v4_css,
     serialize_ts,
 )
+from chroma.taxonomy import (
+    CANONICAL_GLOBAL,
+    CANONICAL_SEMANTIC,
+    TAXONOMIES,
+    TAXONOMY_REGISTRY,
+    TaxonomySpec,
+    get_taxonomy,
+    sanitize_token,
+)
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
     BRAND_SCALE_NAMES,
+    CANONICAL_SEMANTIC_TO_GLOBAL,
     DARK,
     LIGHT,
     SCALE_STEP_LEGEND,
@@ -61,6 +73,7 @@ from chroma.tokens import (
     build_layers,
     color_ramp,
     neutral_steps,
+    semantic_to_global,
     status_scale,
     status_scale_steps,
     verify_contrast,
@@ -69,6 +82,9 @@ from chroma.tokens import (
 __all__ = [
     "ACCENT_TOKEN_NAMES",
     "BRAND_SCALE_NAMES",
+    "CANONICAL_GLOBAL",
+    "CANONICAL_SEMANTIC",
+    "CANONICAL_SEMANTIC_TO_GLOBAL",
     "DARK",
     "LIGHT",
     "SCALE_STEP_LEGEND",
@@ -79,7 +95,10 @@ __all__ = [
     "STATUS_SPECS",
     "STATUS_TOKEN_NAMES",
     "STEP_KEYS",
+    "TAXONOMIES",
+    "TAXONOMY_REGISTRY",
     "THEMES",
+    "TaxonomySpec",
     "accent_scale",
     "brand_scale_steps",
     "build_layers",
@@ -94,6 +113,7 @@ __all__ = [
     "emit_sass",
     "emit_stylus",
     "emit_ts",
+    "get_taxonomy",
     "hsl_to_rgb",
     "neutral_steps",
     "oklch_to_hex",
@@ -103,6 +123,8 @@ __all__ = [
     "rgb_to_hex",
     "rgb_to_hsl",
     "rgb_to_oklch",
+    "sanitize_token",
+    "semantic_to_global",
     "status_scale",
     "status_scale_steps",
     "serialize_css",

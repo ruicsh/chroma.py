@@ -1,4 +1,4 @@
-"""Atmos two-tier token system: global -> semantic, in OKLCH.
+"""Two-tier token system: global -> semantic, in OKLCH.
 
 ``chroma`` layers tokens across two abstraction tiers so application code
 stays decoupled from branding changes:
@@ -12,7 +12,8 @@ from an explicit, monotonic interpolation curve in OKLCH (lightness and chroma
 are piecewise-linear functions of the normalized step position
 ``t = (step-1)/11``) while hue is held constant at the locked brand
 coordinate. No step is a sampled array entry. Semantic tokens bind functional
-intent (Atmos naming) to those steps.
+intent (the baseline Atmos naming) to those steps; the taxonomy layer renames
+both tiers for the target design framework.
 """
 
 from __future__ import annotations
@@ -27,6 +28,10 @@ from chroma.color import (
     parse_hex,
     relative_luminance,
     rgb_to_oklch,
+)
+from chroma.taxonomy import (
+    STATUS_FAMILIES,
+    get_taxonomy,
 )
 
 _AAA_SOLID = 7.0  # accent solid vs its on-color label
@@ -49,7 +54,7 @@ ACCENT_TOKEN_NAMES: tuple[str, ...] = (
 # (independent of the brand coordinate) and an explicit on-color polarity, so
 # success/danger/info read as vivid dark solids under white labels while the
 # amber warning stays light under a black label.
-STATUS_FAMILIES: tuple[str, ...] = ("success", "warning", "danger", "info")
+# (Defined canonically in chroma.taxonomy and re-exported here.)
 
 
 class _StatusSpec(TypedDict):
@@ -206,11 +211,13 @@ LIGHT = ThemeSpec(
 THEMES: dict[str, ThemeSpec] = {theme.name: theme for theme in (DARK, LIGHT)}
 
 # ---------------------------------------------------------------------------
-# Layer 2 -> Layer 1: semantic token (Atmos functional intent) resolves to a
-# global token (a Radix neutral step or a brand accent value).
+# Layer 2 -> Layer 1: semantic concept (functional intent) resolves to a
+# global primitive (a Radix neutral step, a brand accent, or a status step).
+# This table is taxonomy-independent; the taxonomy only renames both sides.
 # ---------------------------------------------------------------------------
 
-SEMANTIC_TO_GLOBAL: dict[str, str] = {
+# Canonical concept id -> canonical global primitive id.
+CANONICAL_SEMANTIC_TO_GLOBAL: dict[str, str] = {
     "bg-surface-root": "step-1",
     "bg-surface-default": "step-2",
     "bg-surface-subtle": "step-3",
@@ -219,10 +226,10 @@ SEMANTIC_TO_GLOBAL: dict[str, str] = {
     "border-subtle": "step-6",
     "border-default": "step-7",
     "border-strong": "step-8",
-    "text-disabled": "step-8",  # recessed inactive text matches structural borders
-    "text-muted": "step-10",
-    "text-secondary": "step-11",
-    "text-primary": "step-12",
+    "text-foreground-disabled": "step-8",  # recessed text matches structural borders
+    "text-foreground-muted": "step-10",
+    "text-foreground-secondary": "step-11",
+    "text-foreground-primary": "step-12",
     "text-on-accent": "accent-on",
     "bg-action-primary": "accent",
     "bg-action-hover": "accent-hover",
@@ -230,11 +237,44 @@ SEMANTIC_TO_GLOBAL: dict[str, str] = {
 }
 
 for _family in STATUS_FAMILIES:
-    SEMANTIC_TO_GLOBAL[f"bg-{_family}-subtle"] = f"{_family}-2"
-    SEMANTIC_TO_GLOBAL[f"bg-{_family}-strong"] = _family
-    SEMANTIC_TO_GLOBAL[f"border-{_family}"] = f"{_family}-6"
-    SEMANTIC_TO_GLOBAL[f"text-{_family}"] = f"{_family}-11"
-    SEMANTIC_TO_GLOBAL[f"text-on-{_family}"] = f"{_family}-on"
+    CANONICAL_SEMANTIC_TO_GLOBAL[f"bg-{_family}-subtle"] = f"{_family}-2"
+    CANONICAL_SEMANTIC_TO_GLOBAL[f"bg-{_family}-strong"] = _family
+    CANONICAL_SEMANTIC_TO_GLOBAL[f"border-{_family}"] = f"{_family}-6"
+    CANONICAL_SEMANTIC_TO_GLOBAL[f"text-{_family}"] = f"{_family}-11"
+    CANONICAL_SEMANTIC_TO_GLOBAL[f"text-on-{_family}"] = f"{_family}-on"
+
+
+def semantic_to_global(taxonomy: str = "atmos") -> dict[str, str]:
+    """Map each taxonomy semantic token name to its primitive global name.
+
+    The returned ``{semantic_name: global_name}`` aliases the Tier-2 semantic
+    tokens (renamed by the taxonomy) onto the Tier-1 primitive names (also
+    renamed by the taxonomy).
+    """
+    spec = get_taxonomy(taxonomy)
+    mapping: dict[str, str] = {}
+    for concept, source in CANONICAL_SEMANTIC_TO_GLOBAL.items():
+        mapping[spec.semantic_name(concept)] = spec.global_primitive(source)
+    return mapping
+
+
+# Backwards-compatible alias for the baseline (atmos) taxonomy: actual emitted
+# semantic token name -> actual emitted global token name. Consumers may use it
+# against ``build_layers`` output directly (``layers[theme]['semantic'][k] ==
+# layers[theme]['global'][SEMANTIC_TO_GLOBAL[k]]``).
+SEMANTIC_TO_GLOBAL: dict[str, str] = semantic_to_global("atmos")
+
+
+def neutral_scale_names(taxonomy: str = "atmos") -> tuple[str, ...]:
+    """Return the 12 neutral primitive names for ``taxonomy`` (Tier 1)."""
+    spec = get_taxonomy(taxonomy)
+    return tuple(spec.global_primitive(f"step-{i}") for i in range(1, 13))
+
+
+def brand_scale_names(taxonomy: str = "atmos") -> tuple[str, ...]:
+    """Return the 12 brand primitive names for ``taxonomy`` (Tier 1)."""
+    spec = get_taxonomy(taxonomy)
+    return tuple(spec.global_primitive(f"brand-{i}") for i in range(1, 13))
 
 
 def _interp(controls: tuple[tuple[float, float], ...], x: float) -> float:
@@ -476,7 +516,9 @@ def status_scale(
 
 
 def build_layers(
-    hex_value: str, preserve_vibrancy: bool = False
+    hex_value: str,
+    preserve_vibrancy: bool = False,
+    taxonomy: str = "atmos",
 ) -> dict[str, dict[str, dict[str, str]]]:
     """Compile the two-tier dual-theme token map from a brand hex.
 
@@ -486,12 +528,18 @@ def build_layers(
     AAA against its on-color label (or, with ``preserve_vibrancy``, locked to
     the brand with the on-color solved instead). The four status families
     carry their canonical hues with AA-guaranteed on-colors.
+
+    ``taxonomy`` selects the target naming framework (default ``atmos``). The
+    underlying OKLCH math and functional bindings are identical for every
+    taxonomy; only the emitted token names change, applied through a pure
+    two-tier rename (Tier 1 primitives, then Tier 2 semantic aliases).
     """
     brand = parse_hex(hex_value)
     _, _, hue = rgb_to_oklch(brand)
+    spec = get_taxonomy(taxonomy)
     layers: dict[str, dict[str, dict[str, str]]] = {}
     for theme in (DARK, LIGHT):
-        global_tokens = {
+        canonical_global = {
             name: oklch_to_hex(*oklch)
             for name, oklch in {
                 **neutral_steps(theme, hue),
@@ -501,10 +549,19 @@ def build_layers(
                 **status_scale_steps(theme),
             }.items()
         }
-        semantic = {
-            name: global_tokens[source] for name, source in SEMANTIC_TO_GLOBAL.items()
+        # Tier 1: rename primitive scale steps via the taxonomy naming.
+        global_tokens = {
+            spec.global_primitive(name): value
+            for name, value in canonical_global.items()
         }
-        semantic["bg-surface-overlay"] = oklch_to_hex(
+        # Tier 2: semantic concepts renamed by the taxonomy, aliasing the
+        # renamed Tier-1 primitives. Overlay is a computed surface, not an alias.
+        semantic: dict[str, str] = {}
+        for concept, source in CANONICAL_SEMANTIC_TO_GLOBAL.items():
+            semantic[spec.semantic_name(concept)] = global_tokens[
+                spec.global_primitive(source)
+            ]
+        semantic[spec.semantic_name("bg-surface-overlay")] = oklch_to_hex(
             theme.overlay_lightness, theme.overlay_chroma, hue
         )
         layers[theme.name] = {
@@ -516,6 +573,7 @@ def build_layers(
 
 def verify_contrast(
     layers: dict[str, dict[str, dict[str, str]]],
+    taxonomy: str = "atmos",
 ) -> dict[str, dict[str, float]]:
     """Report the WCAG contrast of every structural text/background pairing.
 
@@ -523,8 +581,18 @@ def verify_contrast(
     pairings the system guarantees: ``text-*`` on every ``bg-surface-*``, the
     accent on-color label against every action state, and the status text and
     on-color labels against their expected surfaces (WCAG AA).
+
+    Pairing labels are reported in the active taxonomy's naming.
     """
-    surfaces = (
+    spec = get_taxonomy(taxonomy)
+
+    def n(concept: str) -> str:
+        return spec.semantic_name(concept)
+
+    def gp(primitive: str) -> str:
+        return spec.global_primitive(primitive)
+
+    surface_concepts = (
         "bg-surface-root",
         "bg-surface-default",
         "bg-surface-subtle",
@@ -532,7 +600,15 @@ def verify_contrast(
         "bg-surface-active",
         "bg-surface-overlay",
     )
-    texts = ("text-primary", "text-secondary", "text-muted")
+    surfaces = tuple(n(c) for c in surface_concepts)
+    texts = tuple(
+        n(c)
+        for c in (
+            "text-foreground-primary",
+            "text-foreground-secondary",
+            "text-foreground-muted",
+        )
+    )
     report: dict[str, dict[str, float]] = {}
     for theme_name, theme in layers.items():
         semantic = theme["semantic"]
@@ -544,18 +620,21 @@ def verify_contrast(
                     parse_hex(semantic[text]), parse_hex(semantic[surface])
                 )
         for state in ("bg-action-primary", "bg-action-hover", "bg-action-active"):
-            report[theme_name][f"text-on-accent/{state}"] = contrast_ratio(
-                parse_hex(semantic["text-on-accent"]), parse_hex(semantic[state])
+            report[theme_name][f"{n('text-on-accent')}/{n(state)}"] = contrast_ratio(
+                parse_hex(semantic[n("text-on-accent")]),
+                parse_hex(semantic[n(state)]),
             )
         for family in STATUS_FAMILIES:
             for state in (family, f"{family}-hover", f"{family}-active"):
-                report[theme_name][f"text-on-{family}/{state}"] = contrast_ratio(
-                    parse_hex(semantic[f"text-on-{family}"]),
-                    parse_hex(global_tokens[state]),
+                report[theme_name][f"{n(f'text-on-{family}')}/{gp(state)}"] = (
+                    contrast_ratio(
+                        parse_hex(semantic[n(f"text-on-{family}")]),
+                        parse_hex(global_tokens[gp(state)]),
+                    )
                 )
             for surface in surfaces:
-                report[theme_name][f"text-{family}/{surface}"] = contrast_ratio(
-                    parse_hex(semantic[f"text-{family}"]),
+                report[theme_name][f"{n(f'text-{family}')}/{surface}"] = contrast_ratio(
+                    parse_hex(semantic[n(f"text-{family}")]),
                     parse_hex(semantic[surface]),
                 )
     return report

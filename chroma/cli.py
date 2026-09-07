@@ -20,11 +20,14 @@ from chroma.serializers import (
     emit_tailwind_v3,
     serialize_preview,
 )
+from chroma.taxonomy import TAXONOMIES, get_taxonomy
 from chroma.tokens import STATUS_FAMILIES, build_layers, verify_contrast
 
 
 def _report_accent(
-    hex_value: str, layers: dict[str, dict[str, dict[str, str]]]
+    hex_value: str,
+    layers: dict[str, dict[str, dict[str, str]]],
+    taxonomy: str = "atmos",
 ) -> None:
     """Warn + report the on-color and its contrast when vibrancy is preserved.
 
@@ -33,8 +36,9 @@ def _report_accent(
     fell back to the lightness-normalized path. The achieved text-on-accent
     ratio is reported against every action state for both themes.
     """
+    spec = get_taxonomy(taxonomy)
     brand = rgb_to_hex(parse_hex(hex_value))
-    preserved = layers["light"]["global"]["accent"] == brand
+    preserved = layers["light"]["global"][spec.global_primitive("accent")] == brand
     if not preserved:
         print(
             "chroma: warning: this brand is mid-bright, so no on-color can clear "
@@ -42,10 +46,12 @@ def _report_accent(
             "normalization.",
             file=sys.stderr,
         )
-    report = verify_contrast(layers)
+    report = verify_contrast(layers, taxonomy)
+    action_states = ("bg-action-primary", "bg-action-hover", "bg-action-active")
+    on_accent = spec.semantic_name("text-on-accent")
     for theme_name, pairings in report.items():
-        for state in ("bg-action-primary", "bg-action-hover", "bg-action-active"):
-            pairing = f"text-on-accent/{state}"
+        for state in action_states:
+            pairing = f"{on_accent}/{spec.semantic_name(state)}"
             ratio = pairings[pairing]
             print(
                 f"chroma: [{theme_name}] {pairing}: {ratio:.2f}:1",
@@ -53,7 +59,10 @@ def _report_accent(
             )
         for family in STATUS_FAMILIES:
             for state in (family, f"{family}-hover", f"{family}-active"):
-                pairing = f"text-on-{family}/{state}"
+                pairing = (
+                    f"{spec.semantic_name(f'text-on-{family}')}/"
+                    f"{spec.global_primitive(state)}"
+                )
                 ratio = pairings[pairing]
                 print(
                     f"chroma: [{theme_name}] {pairing}: {ratio:.2f}:1",
@@ -99,16 +108,39 @@ def main(argv: list[str] | None = None) -> int:
         "instead of shifting accent lightness (bright accents get an ultra-dark "
         "chromatic-gray label; mid-bright brands fall back to normalization)",
     )
+    parser.add_argument(
+        "-t",
+        "--taxonomy",
+        choices=TAXONOMIES,
+        default="atmos",
+        help="The target design-system token taxonomy (Default: atmos)",
+    )
     args = parser.parse_args(argv)
 
+    if args.format == "preview" and args.taxonomy != "atmos":
+        print(
+            f"chroma: error: taxonomy {args.taxonomy!r} cannot be rendered by the "
+            "'preview' format — the preview embeds Atmos-named swatches. Use "
+            "-t atmos, or a token format such as json / css / tailwind.",
+            file=sys.stderr,
+        )
+        return 1
+
     try:
-        layers = build_layers(args.hex, preserve_vibrancy=args.preserve_vibrancy)
+        layers = build_layers(
+            args.hex,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     except ValueError as exc:
         print(f"chroma: error: {exc}", file=sys.stderr)
         return 2
+    except KeyError as exc:
+        print(f"chroma: error: {exc}", file=sys.stderr)
+        return 1
 
     if args.preserve_vibrancy:
-        _report_accent(args.hex, layers)
+        _report_accent(args.hex, layers, taxonomy=args.taxonomy)
 
     if args.format == "json":
         emit_json(
@@ -116,32 +148,88 @@ def main(argv: list[str] | None = None) -> int:
             args.hex,
             args.output,
             preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
         )
     elif args.format == "css":
-        emit_css(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_css(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "ts":
-        emit_ts(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_ts(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "dtcg":
-        emit_dtcg(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_dtcg(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "figma":
-        emit_figma(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_figma(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "sass":
-        emit_sass(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_sass(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "less":
-        emit_less(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_less(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "stylus":
-        emit_stylus(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_stylus(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "tailwind-v3":
-        emit_tailwind_v3(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_tailwind_v3(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
     elif args.format == "preview":
         emit_preview(
-            layers, args.output, args.hex, preserve_vibrancy=args.preserve_vibrancy
+            layers,
+            args.output,
+            args.hex,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
         )
     else:
-        emit_tailwind(layers, args.output, preserve_vibrancy=args.preserve_vibrancy)
+        emit_tailwind(
+            layers,
+            args.output,
+            preserve_vibrancy=args.preserve_vibrancy,
+            taxonomy=args.taxonomy,
+        )
 
     # When a theme file is created, also emit a visual preview alongside it.
-    if args.output is not None and args.format != "preview":
+    # The preview embeds Atmos-named swatches, so it is only emitted for the
+    # atmos taxonomy (other taxonomies render through the token formats only).
+    if (
+        args.output is not None
+        and args.format != "preview"
+        and args.taxonomy == "atmos"
+    ):
         from pathlib import Path
 
         out_path = Path(args.output)
@@ -154,7 +242,10 @@ def main(argv: list[str] | None = None) -> int:
         if not is_same:
             preview_path.write_text(
                 serialize_preview(
-                    layers, args.hex, preserve_vibrancy=args.preserve_vibrancy
+                    layers,
+                    args.hex,
+                    preserve_vibrancy=args.preserve_vibrancy,
+                    taxonomy=args.taxonomy,
                 )
             )
             print(f"wrote {preview_path}", file=sys.stderr)

@@ -10,11 +10,12 @@ from chroma.tokens import (
     STATUS_FAMILIES,
     STATUS_SPECS,
     STATUS_TOKEN_NAMES,
-    STEP_KEYS,
     THEMES,
     _interp,
     accent_scale,
+    brand_scale_names,
     brand_scale_steps,
+    neutral_scale_names,
     neutral_steps,
     status_scale,
     status_scale_steps,
@@ -42,9 +43,9 @@ class TestLayerStructure(unittest.TestCase):
                 self.assertEqual(set(layers[theme_name]), {"global", "semantic"})
                 self.assertEqual(
                     set(layers[theme_name]["global"]),
-                    set(STEP_KEYS)
+                    set(neutral_scale_names())
                     | set(ACCENT_TOKEN_NAMES)
-                    | set(BRAND_SCALE_NAMES)
+                    | set(brand_scale_names())
                     | set(STATUS_TOKEN_NAMES),
                 )
                 for value in layers[theme_name]["global"].values():
@@ -312,9 +313,9 @@ class TestContrastGuarantees(unittest.TestCase):
                 report = verify_contrast(layers)
                 for theme_name in ("light", "dark"):
                     for pairing, ratio in report[theme_name].items():
-                        if pairing.startswith("text-muted"):
+                        if pairing.startswith("text-foreground-muted"):
                             continue
-                        if pairing.startswith("text-secondary"):
+                        if pairing.startswith("text-foreground-secondary"):
                             self.assertGreaterEqual(
                                 ratio, 4.5, (brand, theme_name, pairing)
                             )

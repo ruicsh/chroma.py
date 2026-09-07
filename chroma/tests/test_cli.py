@@ -25,7 +25,7 @@ class TestCLI(unittest.TestCase):
             self.assertIn("dark", payload[layer])
         self.assertIn("oklch", payload)
         self.assertIn("bg-surface-root", payload["semantic"]["light"])
-        self.assertIn("step-12", payload["global"]["light"])
+        self.assertIn("neutral-scale-12", payload["global"]["light"])
 
     def test_json_to_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -51,9 +51,11 @@ class TestCLI(unittest.TestCase):
         self.assertIn("@custom-variant dark", text)
         self.assertIn(".dark {", text)
         self.assertIn("--color-surface-root: var(--bg-surface-root);", text)
-        self.assertIn("--color-foreground-primary: var(--text-primary);", text)
+        self.assertIn(
+            "--color-foreground-primary: var(--text-foreground-primary);", text
+        )
         self.assertIn("--color-on-accent: var(--text-on-accent);", text)
-        self.assertIn("--bg-surface-root: var(--step-1);", text)
+        self.assertIn("--bg-surface-root: var(--neutral-scale-1);", text)
         self.assertIn("/* Core Semantic Layout Layer */", text)
         self.assertIn("/* The 12-Step Mathematical Gray Ramp */", text)
         # usage hints
@@ -62,7 +64,7 @@ class TestCLI(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "--color-foreground-muted: var(--text-muted);  /* text-foreground-muted */",
+            "--color-foreground-muted: var(--text-foreground-muted);  /* text-foreground-muted */",
             text,
         )
         self.assertIn("/* app canvas background */", text)
@@ -110,7 +112,9 @@ class TestCLI(unittest.TestCase):
             self.assertIn("module.exports", config)
             self.assertIn("darkMode: 'class'", config)
             self.assertIn("surface: { root: 'var(--bg-surface-root)'", config)
-            self.assertIn("foreground: { primary: 'var(--text-primary)'", config)
+            self.assertIn(
+                "foreground: { primary: 'var(--text-foreground-primary)'", config
+            )
             self.assertIn("on: { accent: 'var(--text-on-accent)'", config)
             self.assertIn("action: { primary: 'var(--bg-action-primary)'", config)
             # usage hints
@@ -119,7 +123,7 @@ class TestCLI(unittest.TestCase):
             self.assertIn(":root {", css)
             self.assertIn(".dark {", css)
             self.assertIn("--accent: #d7e8ff;", css)
-            self.assertIn("--bg-surface-root: var(--step-1);", css)
+            self.assertIn("--bg-surface-root: var(--neutral-scale-1);", css)
             self.assertIn("/* app canvas background */", css)
             self.assertIn("/* critical numbers & main titles */", css)
 
@@ -176,6 +180,31 @@ class TestCLI(unittest.TestCase):
                 main(["--help"])
         self.assertEqual(cm.exception.code, 0)
         self.assertIn("usage:", out.getvalue())
+
+    def test_preview_with_non_atmos_exits_1(self):
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = main(["6366f1", "-t", "m3", "-f", "preview"])
+        self.assertEqual(code, 1)
+        self.assertIn("error", err.getvalue().lower())
+        self.assertIn("preview", err.getvalue().lower())
+
+    def test_json_meta_reports_taxonomy(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main(["6366f1", "-t", "m3", "-f", "json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertEqual(payload["meta"]["taxonomy"], "m3")
+        self.assertIn("sys-color-on-surface", payload["semantic"]["light"])
+
+    def test_json_meta_reports_taxonomy_prefix(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = main(["6366f1", "-t", "atlassian", "-f", "json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertEqual(payload["meta"]["taxonomy_prefix"], "color.")
 
 
 if __name__ == "__main__":
