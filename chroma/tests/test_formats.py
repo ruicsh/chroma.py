@@ -10,6 +10,7 @@ from pathlib import Path
 
 from chroma import build_layers
 from chroma.cli import main
+from chroma.taxonomy import TAXONOMIES
 from chroma.serializers import (
     serialize_css,
     serialize_dtcg,
@@ -550,6 +551,12 @@ class TestSampleSync(unittest.TestCase):
         yield "theme.scss", serialize_sass(layers)
         yield "theme.less", serialize_less(layers)
         yield "theme.styl", serialize_stylus(layers)
+        for taxonomy in TAXONOMIES:
+            tax_layers = build_layers(BRAND, taxonomy=taxonomy)
+            yield (
+                f"taxonomies/{taxonomy}.json",
+                serialize_json(tax_layers, BRAND, taxonomy=taxonomy),
+            )
 
     def test_samples_up_to_date(self):
         root = Path(__file__).resolve().parents[2]

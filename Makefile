@@ -28,6 +28,11 @@ samples:
 	uv run python -m chroma 6366f1 -f less -o samples/theme.less
 	uv run python -m chroma 6366f1 -f stylus -o samples/theme.styl
 	uv run python -m chroma 6366f1 -f preview -o samples/preview.html
+	uv run python -m chroma 6366f1 -t atmos -f json -o samples/taxonomies/atmos.json
+	uv run python -m chroma 6366f1 -t m3 -f json -o samples/taxonomies/m3.json
+	uv run python -m chroma 6366f1 -t atlassian -f json -o samples/taxonomies/atlassian.json
+	uv run python -m chroma 6366f1 -t slds -f json -o samples/taxonomies/slds.json
+	uv run python -m chroma 6366f1 -t spectrum -f json -o samples/taxonomies/spectrum.json
 
 %:
 	@true
