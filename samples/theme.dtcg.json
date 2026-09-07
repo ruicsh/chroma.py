@@ -137,25 +137,27 @@
       }
     },
     "text": {
-      "disabled": {
-        "$value": "#cacbd1",
-        "$type": "color",
-        "$description": "recessed inactive parameters"
-      },
-      "muted": {
-        "$value": "#717279",
-        "$type": "color",
-        "$description": "metadata, labels, table headers"
-      },
-      "secondary": {
-        "$value": "#2d2e34",
-        "$type": "color",
-        "$description": "body text & descriptive data"
-      },
-      "primary": {
-        "$value": "#05050a",
-        "$type": "color",
-        "$description": "critical numbers & main titles"
+      "foreground": {
+        "disabled": {
+          "$value": "#cacbd1",
+          "$type": "color",
+          "$description": "recessed inactive parameters"
+        },
+        "muted": {
+          "$value": "#717279",
+          "$type": "color",
+          "$description": "metadata, labels, table headers"
+        },
+        "secondary": {
+          "$value": "#2d2e34",
+          "$type": "color",
+          "$description": "body text & descriptive data"
+        },
+        "primary": {
+          "$value": "#05050a",
+          "$type": "color",
+          "$description": "critical numbers & main titles"
+        }
       },
       "on": {
         "accent": {
@@ -344,25 +346,27 @@
       }
     },
     "text": {
-      "disabled": {
-        "$value": "#545663",
-        "$type": "color",
-        "$description": "recessed inactive parameters"
-      },
-      "muted": {
-        "$value": "#a0a3b3",
-        "$type": "color",
-        "$description": "metadata, labels, table headers"
-      },
-      "secondary": {
-        "$value": "#cccfe1",
-        "$type": "color",
-        "$description": "body text & descriptive data"
-      },
-      "primary": {
-        "$value": "#eff2ff",
-        "$type": "color",
-        "$description": "critical numbers & main titles"
+      "foreground": {
+        "disabled": {
+          "$value": "#545663",
+          "$type": "color",
+          "$description": "recessed inactive parameters"
+        },
+        "muted": {
+          "$value": "#a0a3b3",
+          "$type": "color",
+          "$description": "metadata, labels, table headers"
+        },
+        "secondary": {
+          "$value": "#cccfe1",
+          "$type": "color",
+          "$description": "body text & descriptive data"
+        },
+        "primary": {
+          "$value": "#eff2ff",
+          "$type": "color",
+          "$description": "critical numbers & main titles"
+        }
       },
       "on": {
         "accent": {
