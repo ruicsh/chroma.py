@@ -117,42 +117,6 @@ def sanitize_token(name: str) -> str:
     return cleaned
 
 
-# ---------------------------------------------------------------------------
-# Material 3 tonal-luminance helper
-# ---------------------------------------------------------------------------
-# Internal Radix steps (1–12) map onto M3 tonal values. The dark end of the M3
-# neutral ramp is ``10`` (near-black) and the light end is ``95`` (near-white),
-# so the internal 1 (lightest surface) -> 12 (darkest text) ladder is expressed
-# through the M3 tone ladder in the same orientation as the framework ships it.
-# Anchors are literal (1->10, 2->12, 3->22, 9->40, 12->95); the remaining steps
-# are filled monotonically between the anchors.
-
-_M3_LUM: dict[int, str] = {
-    1: "10",
-    2: "12",
-    3: "22",
-    4: "26",
-    5: "30",
-    6: "33",
-    7: "36",
-    8: "38",
-    9: "40",
-    10: "60",
-    11: "80",
-    12: "95",
-}
-
-
-def _to_m3_lum(step: int) -> str:
-    """Map an internal scale step (1–12) to its M3 tonal-luminance string."""
-    try:
-        return _M3_LUM[step]
-    except KeyError:
-        raise KeyError(
-            f"m3 tonal mapping only defined for steps 1..12, got {step!r}"
-        ) from None
-
-
 @dataclass(frozen=True)
 class TaxonomySpec:
     """Declarative naming contract for one target framework."""
@@ -383,11 +347,11 @@ def _atmos_brand(step: int) -> str:
 
 
 def _m3_neutral(step: int) -> str:
-    return f"ref-palette-neutral{_to_m3_lum(step)}"
+    return f"md-ref-palette-neutral-{step}"
 
 
 def _m3_brand(step: int) -> str:
-    return f"ref-palette-primary{_to_m3_lum(step)}"
+    return f"md-ref-palette-primary-{step}"
 
 
 def _atlassian_neutral(step: int) -> str:

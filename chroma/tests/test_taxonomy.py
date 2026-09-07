@@ -76,22 +76,22 @@ class TestPrimitiveNaming(unittest.TestCase):
         self.assertEqual(spec.brand(1), "brand-scale-1")
         self.assertEqual(spec.brand(12), "brand-scale-12")
 
-    def test_m3_tonal_luminance_anchors(self):
+    def test_m3_sequential_primitive_names(self):
         spec = TAXONOMY_REGISTRY["m3"]
-        self.assertEqual(spec.neutral(1), "ref-palette-neutral10")
-        self.assertEqual(spec.neutral(2), "ref-palette-neutral12")
-        self.assertEqual(spec.neutral(3), "ref-palette-neutral22")
-        self.assertEqual(spec.neutral(9), "ref-palette-neutral40")
-        self.assertEqual(spec.neutral(12), "ref-palette-neutral95")
-        self.assertEqual(spec.brand(9), "ref-palette-primary40")
-
-    def test_m3_luminance_is_monotonic(self):
-        spec = TAXONOMY_REGISTRY["m3"]
-        values = [
-            int(spec.neutral(step)[len("ref-palette-neutral") :])
-            for step in range(1, 13)
-        ]
-        self.assertEqual(values, sorted(values))
+        self.assertEqual(spec.neutral(1), "md-ref-palette-neutral-1")
+        self.assertEqual(spec.neutral(12), "md-ref-palette-neutral-12")
+        self.assertEqual(spec.brand(1), "md-ref-palette-primary-1")
+        self.assertEqual(spec.brand(9), "md-ref-palette-primary-9")
+        neutral_names = [spec.neutral(n) for n in range(1, 13)]
+        self.assertEqual(
+            neutral_names,
+            [f"md-ref-palette-neutral-{n}" for n in range(1, 13)],
+        )
+        brand_names = [spec.brand(n) for n in range(1, 13)]
+        self.assertEqual(
+            brand_names,
+            [f"md-ref-palette-primary-{n}" for n in range(1, 13)],
+        )
 
     def test_padded_hundreds_taxonomies(self):
         atlassian = TAXONOMY_REGISTRY["atlassian"]
@@ -180,6 +180,31 @@ class TestTwoTierLayers(unittest.TestCase):
                 for theme_name in ("light", "dark"):
                     value = layers[theme_name]["semantic"][overlay_name]
                     self.assertTrue(value.startswith("#"))
+
+    def test_m3_output_has_no_tonal_tokens(self):
+        layers = build_layers("6366f1", taxonomy="m3")
+        old_tokens = {
+            "ref-palette-neutral10",
+            "ref-palette-neutral12",
+            "ref-palette-neutral22",
+            "ref-palette-neutral26",
+            "ref-palette-neutral30",
+            "ref-palette-neutral33",
+            "ref-palette-neutral36",
+            "ref-palette-neutral38",
+            "ref-palette-neutral40",
+            "ref-palette-neutral60",
+            "ref-palette-neutral80",
+            "ref-palette-neutral95",
+            "ref-palette-primary40",
+        }
+        for theme_name in ("light", "dark"):
+            with self.subTest(theme=theme_name):
+                global_keys = set(layers[theme_name]["global"])
+                self.assertFalse(old_tokens & global_keys)
+                self.assertIn("md-ref-palette-neutral-1", global_keys)
+                self.assertIn("md-ref-palette-neutral-12", global_keys)
+                self.assertIn("md-ref-palette-primary-9", global_keys)
 
     def test_text_disabled_matches_structural_borders(self):
         for brand in BRANDS:

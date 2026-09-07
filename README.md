@@ -54,7 +54,7 @@ The single required argument is the brand **hex** color (e.g. `6366f1`); its hue
 Specify your target front-end framework using the `--taxonomy` flag. The underlying mathematical scale remains pure, while the outer token keys morph to match your environment:
 
 - **`atmos` (Default):** Flat, high-density Systematic UI naming conventions (`bg-surface-default`, `text-foreground-primary`).
-- **`m3`:** Google Material Design 3 contextual color role pairs with tonal luminance step inversion (`sys-color-surface-container-low`).
+- **`m3`:** Google Material Design 3 contextual color role pairs over a linear sequential primitive ramp (`sys-color-surface-container-low`).
 - **`atlassian`:** Nested object dot-notation layout optimized for dense SaaS dashboard configurations (`background.elevation.surface`).
 - **`slds`:** Salesforce Lightning Design System 2 decoupled structural styling hooks (`color-neutral-base-20`).
 - **`spectrum`:** Adobe Spectrum immutable multi-package core naming tokens (`core-color-background-layer-low`).
