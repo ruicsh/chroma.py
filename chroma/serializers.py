@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 from chroma import __version__
 from chroma.color import parse_hex, rgb_to_hex, rgb_to_hsl, rgb_to_oklch
@@ -27,10 +28,13 @@ from chroma.taxonomy import (
     get_taxonomy,
 )
 from chroma.tokens import (
+    CANONICAL_SEMANTIC_TO_GLOBAL,
     STATUS_COORD_NAMES,
     STATUS_FAMILIES as _TOKENS_STATUS_FAMILIES,
     STATUS_SCALE_NAMES,
     THEMES,
+    brand_scale_names,
+    neutral_scale_names,
     semantic_to_global,
 )
 
@@ -886,6 +890,162 @@ _PREVIEW_SUFFIX = (Path(__file__).parent / "preview_suffix.html").read_text(
     encoding="utf-8"
 )
 
+# Curated neutral-ramp rows: each is ``(concept, use)`` where ``concept`` is a
+# canonical semantic concept (a tuple of concepts joined for the display token,
+# or ``None`` for the literal em-dash row). The ramp cell's token column shows
+# the taxonomy's name for that concept.
+_PREVIEW_NEUTRAL: tuple[tuple[str | tuple[str, ...] | None, str], ...] = (
+    ("bg-surface-root", "app canvas"),
+    ("bg-surface-default", "panels / cards"),
+    ("bg-surface-subtle", "inputs / rows"),
+    ("bg-surface-hover", "row hover"),
+    ("bg-surface-active", "selected / active"),
+    ("border-subtle", "grid-line dividers"),
+    ("border-default", "component bounds"),
+    (("border-strong", "text-foreground-disabled"), "focus / disabled"),
+    (None, "pure ramp step"),
+    ("text-foreground-muted", "metadata / labels"),
+    ("text-foreground-secondary", "body text"),
+    ("text-foreground-primary", "headings"),
+)
+
+# Curated semantic-matrix rows per domain: ``(concept, use)``. Rendered as
+# ``[token, ref, use]`` where ``token``/``ref`` resolve per taxonomy.
+_PREVIEW_MATRICES: dict[str, tuple[tuple[str, str], ...]] = {
+    "surface": (
+        ("bg-surface-root", "root canvas"),
+        ("bg-surface-default", "layout panels & cards"),
+        ("bg-surface-subtle", "inputs, table cells"),
+        ("bg-surface-hover", "row hover"),
+        ("bg-surface-active", "selected / active"),
+        ("bg-surface-overlay", "popovers, modals"),
+        ("bg-success-subtle", "success tint"),
+        ("bg-success-strong", "success solid"),
+        ("bg-warning-subtle", "warning tint"),
+        ("bg-warning-strong", "warning solid"),
+        ("bg-danger-subtle", "danger tint"),
+        ("bg-danger-strong", "danger solid"),
+        ("bg-info-subtle", "info tint"),
+        ("bg-info-strong", "info solid"),
+    ),
+    "border": (
+        ("border-subtle", "grid-line dividers"),
+        ("border-default", "component boundaries"),
+        ("border-strong", "focus rings"),
+        ("border-success", "success border"),
+        ("border-warning", "warning border"),
+        ("border-danger", "danger border"),
+        ("border-info", "info border"),
+    ),
+    "text": (
+        ("text-foreground-disabled", "recessed text"),
+        ("text-foreground-muted", "metadata / labels"),
+        ("text-foreground-secondary", "body text"),
+        ("text-foreground-primary", "headings"),
+        ("text-success", "success text"),
+        ("text-warning", "warning text"),
+        ("text-danger", "danger text"),
+        ("text-info", "info text"),
+    ),
+    "on": (
+        ("text-on-accent", "labels on accent"),
+        ("text-on-success", "on success"),
+        ("text-on-warning", "on warning"),
+        ("text-on-danger", "on danger"),
+        ("text-on-info", "on info"),
+    ),
+    "action": (
+        ("bg-action-primary", "primary buttons"),
+        ("bg-action-hover", "button hover"),
+        ("bg-action-active", "button pressed"),
+    ),
+}
+
+
+class PreviewData(TypedDict):
+    """Typed shape of the data object injected into the preview page."""
+
+    neutral: list[list[str]]
+    brand: list[str]
+    surface: list[list[str]]
+    border: list[list[str]]
+    text: list[list[str]]
+    on: list[list[str]]
+    action: list[list[str]]
+    statuses: list[str]
+    statusSemantic: dict[str, list[str]]
+
+
+def _preview_data(taxonomy: str) -> PreviewData:
+    """Build the data object injected into the preview page for ``taxonomy``.
+
+    Returns the neutral ramp, brand ramp, the five semantic matrices, and the
+    canonical status families — all token names resolved to the taxonomy's
+    CSS-safe identifiers (dots -> dashes for dot-delimited frameworks).
+    """
+    spec = _spec(taxonomy)
+
+    def sn(concept: str) -> str:
+        return _css_name(spec.semantic_name(concept))
+
+    def ref(concept: str) -> str:
+        if concept == "bg-surface-overlay":
+            return "direct"
+        source = CANONICAL_SEMANTIC_TO_GLOBAL[concept]
+        return f"var(--{_css_name(spec.global_primitive(source))})"
+
+    neutral: list[list[str]] = []
+    for step, (concept, use) in enumerate(_PREVIEW_NEUTRAL, start=1):
+        name = _css_name(neutral_scale_names(taxonomy)[step - 1])
+        if concept is None:
+            token = "—"
+        elif isinstance(concept, tuple):
+            token = " · ".join(sn(c) for c in concept)
+        else:
+            token = sn(concept)
+        neutral.append([name, use, token])
+
+    matrices: dict[str, list[list[str]]] = {}
+    for group, rows in _PREVIEW_MATRICES.items():
+        matrices[group] = [[sn(concept), ref(concept), use] for concept, use in rows]
+
+    # Per-family status semantic names (solid, on-color, subtle, border, text)
+    # in the order the status section's description strings reference them.
+    status_semantic: dict[str, list[str]] = {}
+    for family in _TOKENS_STATUS_FAMILIES:
+        status_semantic[family] = [
+            sn(f"bg-{family}-strong"),
+            sn(f"text-on-{family}"),
+            sn(f"bg-{family}-subtle"),
+            sn(f"border-{family}"),
+            sn(f"text-{family}"),
+        ]
+
+    return {
+        "neutral": neutral,
+        "brand": [_css_name(name) for name in brand_scale_names(taxonomy)],
+        "surface": matrices["surface"],
+        "border": matrices["border"],
+        "text": matrices["text"],
+        "on": matrices["on"],
+        "action": matrices["action"],
+        "statuses": list(_TOKENS_STATUS_FAMILIES),
+        "statusSemantic": status_semantic,
+    }
+
+
+def _preview_semantic_map(taxonomy: str) -> dict[str, str]:
+    """Map ``--{atmos concept}`` to the taxonomy's CSS var for each concept.
+
+    Used to rename the Atmos-named ``var(--...)`` references baked into the
+    preview template's stylesheet and sample-UI markup.
+    """
+    spec = _spec(taxonomy)
+    return {
+        f"--{concept}": f"--{_css_name(spec.semantic_name(concept))}"
+        for concept in CANONICAL_SEMANTIC
+    }
+
 
 def serialize_preview(
     layers: dict[str, dict[str, dict[str, str]]],
@@ -901,14 +1061,11 @@ def serialize_preview(
     preview is theme-aware via a light/dark toggle and uses only the
     generated tokens (no external assets).
 
-    The embedded swatches and ramp are hard-coded to the baseline Atmos
-    naming, so the preview is only meaningful for ``taxonomy == "atmos"``.
+    The preview renders the active taxonomy's token names: the template's
+    Atmos-named ``var(--...)`` references are renamed to the taxonomy's
+    identifiers and the page script consumes a data blob built from the
+    taxonomy's primitive and semantic names.
     """
-    if taxonomy != "atmos":
-        raise ValueError(
-            f"preview only supports the 'atmos' taxonomy, got {taxonomy!r}; "
-            "render token formats (json / css / tailwind / ...) for other taxonomies."
-        )
     # Canonical brand hex for display (e.g., "#6366f1").
     brand_hex_canonical = rgb_to_hex(parse_hex(brand_hex))
     normalized = brand_hex_canonical.lower()
@@ -931,6 +1088,15 @@ def serialize_preview(
             "chroma \u2014 Default Color System",
             f"chroma \u2014 {brand_hex_canonical} Color System",
         )
+    # Rename the Atmos-named var() references baked into the stylesheet and
+    # sample-UI markup to the active taxonomy's identifiers (longest first to
+    # keep nested names like --text-on-success safe).
+    mapping = _preview_semantic_map(taxonomy)
+    for old in sorted(mapping, key=len, reverse=True):
+        suffix = suffix.replace(old, mapping[old])
+    # Inject the token data the page renders from.
+    data_json = json.dumps(_preview_data(taxonomy), ensure_ascii=True)
+    suffix = suffix.replace("/*__CHROMA_PREVIEW__*/", data_json)
     css_block = serialize_css(layers, preserve_vibrancy, taxonomy).strip()
     return prefix + css_block + suffix
 

@@ -117,15 +117,6 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    if args.format == "preview" and args.taxonomy != "atmos":
-        print(
-            f"chroma: error: taxonomy {args.taxonomy!r} cannot be rendered by the "
-            "'preview' format — the preview embeds Atmos-named swatches. Use "
-            "-t atmos, or a token format such as json / css / tailwind.",
-            file=sys.stderr,
-        )
-        return 1
-
     try:
         layers = build_layers(
             args.hex,
@@ -223,13 +214,8 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     # When a theme file is created, also emit a visual preview alongside it.
-    # The preview embeds Atmos-named swatches, so it is only emitted for the
-    # atmos taxonomy (other taxonomies render through the token formats only).
-    if (
-        args.output is not None
-        and args.format != "preview"
-        and args.taxonomy == "atmos"
-    ):
+    # The preview renders the active taxonomy's token names.
+    if args.output is not None and args.format != "preview":
         from pathlib import Path
 
         out_path = Path(args.output)

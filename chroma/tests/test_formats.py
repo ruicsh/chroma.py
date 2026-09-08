@@ -17,7 +17,6 @@ from chroma.serializers import (
     serialize_figma_mode,
     serialize_json,
     serialize_less,
-    serialize_preview,
     serialize_sass,
     serialize_stylus,
     serialize_tailwind_v3_config,
@@ -83,13 +82,66 @@ class TestPreviewFormat(unittest.TestCase):
             code = main([BRAND, "-f", "preview"])
         self.assertEqual(code, 0)
         self.assertIn("<!DOCTYPE html>", out.getvalue())
+        self.assertIn("var(--neutral-scale-1)", out.getvalue())
+        self.assertIn("var(--bg-surface-root)", out.getvalue())
 
-    def test_preview_rejects_non_atmos(self):
-        from chroma import build_layers as _build
+    def test_preview_renders_for_every_taxonomy(self):
+        from chroma import TAXONOMIES
 
-        layers = _build(BRAND, taxonomy="m3")
-        with self.assertRaises(ValueError):
-            serialize_preview(layers, BRAND, taxonomy="m3")
+        expectations = {
+            "atmos": ("neutral-scale-1", "bg-surface-root"),
+            "m3": ("md-ref-palette-neutral-1", "sys-color-on-surface"),
+            "atlassian": ("palette-neutral-10", "background-sunken"),
+            "slds": ("primitive-color-neutral-1", "color-neutral-base-10"),
+            "spectrum": ("gray-100", "core-color-content-primary"),
+        }
+        for taxonomy in TAXONOMIES:
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = main([BRAND, "-t", taxonomy, "-f", "preview"])
+            self.assertEqual(code, 0)
+            text = out.getvalue()
+            self.assertIn("<!DOCTYPE html>", text)
+            neutral, semantic = expectations[taxonomy]
+            self.assertIn(neutral, text)
+            self.assertIn(semantic, text)
+            # No raw dots may leak into CSS var identifiers.
+            self.assertNotRegex(text, r"var\(--[a-zA-Z0-9-]*\.[a-zA-Z0-9.-]*\)")
+
+    def test_preview_headings_are_generic(self):
+        from chroma import TAXONOMIES
+
+        for taxonomy in TAXONOMIES:
+            with self.subTest(taxonomy=taxonomy):
+                out = io.StringIO()
+                with redirect_stdout(out):
+                    code = main([BRAND, "-t", taxonomy, "-f", "preview"])
+                self.assertEqual(code, 0)
+                text = out.getvalue()
+                for heading in ("Surfaces", "Borders", "Text", "On-colors", "Actions"):
+                    self.assertIn(f"<h3>{heading}</h3>", text)
+                self.assertNotIn("<h3>bg-surface</h3>", text)
+
+    def test_preview_status_semantics_are_taxonomy_aware(self):
+        from chroma import TAXONOMIES
+        from chroma.serializers import _preview_data
+
+        expected_danger_solid = {
+            "atmos": "bg-danger-strong",
+            "m3": "sys-color-error",
+            "atlassian": "background-danger-bold",
+            "slds": "color-error-base-50",
+            "spectrum": "core-color-background-negative-default",
+        }
+        for taxonomy in TAXONOMIES:
+            data = _preview_data(taxonomy)
+            sem = data["statusSemantic"]
+            with self.subTest(taxonomy=taxonomy):
+                self.assertEqual(set(sem), {"success", "warning", "danger", "info"})
+                for family in ("success", "warning", "danger", "info"):
+                    self.assertEqual(len(sem[family]), 5)
+                    self.assertTrue(all(sem[family]))
+                self.assertEqual(sem["danger"][0], expected_danger_solid[taxonomy])
 
 
 class TestTsFormat(unittest.TestCase):

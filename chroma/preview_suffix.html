@@ -265,31 +265,31 @@ h2 {
     <p class="section-note">Functional intent → global token.</p>
 
     <div class="status-group">
-      <h3>bg-surface</h3>
+      <h3>Surfaces</h3>
       <p class="section-note" style="margin-bottom:8px;">Surfaces — canvas, panels, hover/active, overlay, and status tints.</p>
       <div class="matrix" id="matrix-surface"></div>
     </div>
 
     <div class="status-group">
-      <h3>border</h3>
+      <h3>Borders</h3>
       <p class="section-note" style="margin-bottom:8px;">Boundaries — subtle rules, strong focus, and status borders.</p>
       <div class="matrix" id="matrix-border"></div>
     </div>
 
     <div class="status-group">
-      <h3>text</h3>
+      <h3>Text</h3>
       <p class="section-note" style="margin-bottom:8px;">Typography — primary/muted/disabled and status text.</p>
       <div class="matrix" id="matrix-text"></div>
     </div>
 
     <div class="status-group">
-      <h3>text-on</h3>
+      <h3>On-colors</h3>
       <p class="section-note" style="margin-bottom:8px;">On-colors — labels on accent and status solids.</p>
       <div class="matrix" id="matrix-on"></div>
     </div>
 
     <div class="status-group">
-      <h3>bg-action</h3>
+      <h3>Actions</h3>
       <p class="section-note" style="margin-bottom:8px;">Actions — brand execution.</p>
       <div class="matrix" id="matrix-action"></div>
     </div>
@@ -344,6 +344,7 @@ h2 {
 </div>
 
 <script>
+const PREVIEW = /*__CHROMA_PREVIEW__*/;
 const html = document.documentElement;
 const toggle = document.getElementById('toggle');
 toggle.addEventListener('click', () => {
@@ -367,23 +368,8 @@ const legend = {
 };
 
 const rampEl = document.getElementById('ramp');
-const ramp = [
-  ['neutral-scale-1', 'app canvas', 'bg-surface-root'],
-  ['neutral-scale-2', 'panels / cards', 'bg-surface-default'],
-  ['neutral-scale-3', 'inputs / rows', 'bg-surface-subtle'],
-  ['neutral-scale-4', 'row hover', 'bg-surface-hover'],
-  ['neutral-scale-5', 'selected / active', 'bg-surface-active'],
-  ['neutral-scale-6', 'grid-line dividers', 'border-subtle'],
-  ['neutral-scale-7', 'component bounds', 'border-default'],
-  ['neutral-scale-8', 'focus / disabled', 'border-strong · text-foreground-disabled'],
-  ['neutral-scale-9', 'pure ramp step', '—'],
-  ['neutral-scale-10', 'metadata / labels', 'text-foreground-muted'],
-  ['neutral-scale-11', 'body text', 'text-foreground-secondary'],
-  ['neutral-scale-12', 'headings', 'text-foreground-primary'],
-];
-rampEl.innerHTML = ramp.map(([name, use, token]) => {
-  const stepNum = parseInt(name.split('-')[1]||'0',10);
-  const leg = legend[stepNum]||use;
+rampEl.innerHTML = PREVIEW.neutral.map(([name, use, token], i) => {
+  const leg = legend[i + 1] || use;
   return `
   <div class="ramp-cell" title="${leg}">
     <div class="fill" style="background: var(--${name});"></div>
@@ -402,81 +388,38 @@ function renderMatrix(elId, rows) {
   </div>`).join('');
 }
 
-const matrixSurface = [
-  ['bg-surface-root', 'var(--neutral-scale-1)', 'root canvas'],
-  ['bg-surface-default', 'var(--neutral-scale-2)', 'layout panels & cards'],
-  ['bg-surface-subtle', 'var(--neutral-scale-3)', 'inputs, table cells'],
-  ['bg-surface-hover', 'var(--neutral-scale-4)', 'row hover'],
-  ['bg-surface-active', 'var(--neutral-scale-5)', 'selected / active'],
-  ['bg-surface-overlay', 'direct', 'popovers, modals'],
-  ['bg-success-subtle', 'var(--success-2)', 'success tint'],
-  ['bg-success-strong', 'var(--success)', 'success solid'],
-  ['bg-warning-subtle', 'var(--warning-2)', 'warning tint'],
-  ['bg-warning-strong', 'var(--warning)', 'warning solid'],
-  ['bg-danger-subtle', 'var(--danger-2)', 'danger tint'],
-  ['bg-danger-strong', 'var(--danger)', 'danger solid'],
-  ['bg-info-subtle', 'var(--info-2)', 'info tint'],
-  ['bg-info-strong', 'var(--info)', 'info solid'],
-];
-const matrixBorder = [
-  ['border-subtle', 'var(--neutral-scale-6)', 'grid-line dividers'],
-  ['border-default', 'var(--neutral-scale-7)', 'component boundaries'],
-  ['border-strong', 'var(--neutral-scale-8)', 'focus rings'],
-  ['border-success', 'var(--success-6)', 'success border'],
-  ['border-warning', 'var(--warning-6)', 'warning border'],
-  ['border-danger', 'var(--danger-6)', 'danger border'],
-  ['border-info', 'var(--info-6)', 'info border'],
-];
-const matrixText = [
-  ['text-foreground-disabled', 'var(--neutral-scale-8)', 'recessed text'],
-  ['text-foreground-muted', 'var(--neutral-scale-10)', 'metadata / labels'],
-  ['text-foreground-secondary', 'var(--neutral-scale-11)', 'body text'],
-  ['text-foreground-primary', 'var(--neutral-scale-12)', 'headings'],
-  ['text-success', 'var(--success-11)', 'success text'],
-  ['text-warning', 'var(--warning-11)', 'warning text'],
-  ['text-danger', 'var(--danger-11)', 'danger text'],
-  ['text-info', 'var(--info-11)', 'info text'],
-];
-const matrixOn = [
-  ['text-on-accent', 'var(--accent-on)', 'labels on accent'],
-  ['text-on-success', 'var(--success-on)', 'on success'],
-  ['text-on-warning', 'var(--warning-on)', 'on warning'],
-  ['text-on-danger', 'var(--danger-on)', 'on danger'],
-  ['text-on-info', 'var(--info-on)', 'on info'],
-];
-const matrixAction = [
-  ['bg-action-primary', 'var(--accent)', 'primary buttons'],
-  ['bg-action-hover', 'var(--accent-hover)', 'button hover'],
-  ['bg-action-active', 'var(--accent-active)', 'button pressed'],
-];
-renderMatrix('matrix-surface', matrixSurface);
-renderMatrix('matrix-border', matrixBorder);
-renderMatrix('matrix-text', matrixText);
-renderMatrix('matrix-on', matrixOn);
-renderMatrix('matrix-action', matrixAction);
+renderMatrix('matrix-surface', PREVIEW.surface);
+renderMatrix('matrix-border', PREVIEW.border);
+renderMatrix('matrix-text', PREVIEW.text);
+renderMatrix('matrix-on', PREVIEW.on);
+renderMatrix('matrix-action', PREVIEW.action);
 
-const statuses = ['success', 'warning', 'danger', 'info'];
+const statuses = PREVIEW.statuses;
+const statusSem = PREVIEW.statusSemantic;
 const statusEl = document.getElementById('statuses');
-statusEl.innerHTML = statuses.map(family => `
+statusEl.innerHTML = statuses.map(family => {
+  const sem = statusSem[family];
+  return `
   <div class="status-group">
     <h3><span class="status-dot" style="background: var(--${family});"></span>${family}</h3>
     <div class="status-row">
-      <div class="status-item"><div class="swatch" style="background: var(--${family});"></div><b>${family}</b><span>solid · bg-${family}-strong</span></div>
-      <div class="status-item"><div class="swatch" style="background: var(--${family}-on); border: 1px dashed var(--border-default);"></div><b>${family}-on</b><span>on-color · text-on-${family}</span></div>
-      <div class="status-item"><div class="swatch" style="background: var(--${family}-2);"></div><b>${family}-2</b><span>subtle surface · bg-${family}-subtle</span></div>
-      <div class="status-item"><div class="swatch" style="background: var(--${family}-6);"></div><b>${family}-6</b><span>tinted border · border-${family}</span></div>
-      <div class="status-item"><div class="swatch" style="background: var(--${family}-11);"></div><b>${family}-11</b><span>readable text · text-${family}</span></div>
+      <div class="status-item"><div class="swatch" style="background: var(--${family});"></div><b>${family}</b><span>solid · ${sem[0]}</span></div>
+      <div class="status-item"><div class="swatch" style="background: var(--${family}-on); border: 1px dashed var(--border-default);"></div><b>${family}-on</b><span>on-color · ${sem[1]}</span></div>
+      <div class="status-item"><div class="swatch" style="background: var(--${family}-2);"></div><b>${family}-2</b><span>subtle surface · ${sem[2]}</span></div>
+      <div class="status-item"><div class="swatch" style="background: var(--${family}-6);"></div><b>${family}-6</b><span>tinted border · ${sem[3]}</span></div>
+      <div class="status-item"><div class="swatch" style="background: var(--${family}-11);"></div><b>${family}-11</b><span>readable text · ${sem[4]}</span></div>
     </div>
-  </div>`).join('');
+  </div>`;
+}).join('');
 
 const brandRampEl = document.getElementById('brand-ramp');
 if (brandRampEl) {
-  brandRampEl.innerHTML = Array.from({length: 12}, (_, i) => {
+  brandRampEl.innerHTML = PREVIEW.brand.map((name, i) => {
     const n = i+1;
     const parts = legend[n].split(" — ");
     const desc = parts[0];
     const intent = parts[1];
-    return `<div class="ramp-cell" title="${legend[n]}"><div class="fill" style="background: var(--brand-scale-${n});"></div><div class="meta"><b>brand-scale-${n}</b><span>var(--brand-scale-${n})</span><span class="usage">${desc}</span>${intent ? `<span class="usage intent">→ ${intent}</span>` : ""}</div></div>`;
+    return `<div class="ramp-cell" title="${legend[n]}"><div class="fill" style="background: var(--${name});"></div><div class="meta"><b>${name}</b><span>var(--${name})</span><span class="usage">${desc}</span>${intent ? `<span class="usage intent">→ ${intent}</span>` : ""}</div></div>`;
   }).join('');
 }
 

@@ -181,13 +181,14 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(cm.exception.code, 0)
         self.assertIn("usage:", out.getvalue())
 
-    def test_preview_with_non_atmos_exits_1(self):
-        err = io.StringIO()
-        with redirect_stderr(err):
+    def test_preview_works_for_non_atmos(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
             code = main(["6366f1", "-t", "m3", "-f", "preview"])
-        self.assertEqual(code, 1)
-        self.assertIn("error", err.getvalue().lower())
-        self.assertIn("preview", err.getvalue().lower())
+        self.assertEqual(code, 0)
+        self.assertIn("<!DOCTYPE html>", out.getvalue())
+        self.assertIn("md-ref-palette-neutral-1", out.getvalue())
+        self.assertIn("sys-color-on-surface", out.getvalue())
 
     def test_json_meta_reports_taxonomy(self):
         out = io.StringIO()
