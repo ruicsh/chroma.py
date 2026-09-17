@@ -97,9 +97,7 @@ STATUS_COORD_NAMES: tuple[str, ...] = tuple(
 
 # Full current status global token name set (solid + interaction coordinates
 # plus the 12-step shade scales), used by the tests and the exports.
-STATUS_TOKEN_NAMES: tuple[str, ...] = tuple(
-    (*STATUS_COORD_NAMES, *STATUS_SCALE_NAMES)
-)
+STATUS_TOKEN_NAMES: tuple[str, ...] = tuple((*STATUS_COORD_NAMES, *STATUS_SCALE_NAMES))
 
 # Adapted step legend: the article's 50–950 guide collapsed onto chroma's 1–12
 # Radix protocol. Each index's intent is documented here, on the preview ramp
