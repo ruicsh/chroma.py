@@ -60,7 +60,7 @@ def _report_accent(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="chroma",
-        description="Systematic UI CLI Engine: Compile a complete dual-theme semantic token system from one brand color hex.",
+        description="Generate a dual-theme (light/dark) semantic token set from a single brand color hex.",
     )
     parser.add_argument(
         "hex",

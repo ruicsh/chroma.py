@@ -1,8 +1,8 @@
 # chroma.py
 
-A high-density color system compiler that programmatically generates mathematically uniform, accessible design tokens using the **OKLCH color space**.
+A CLI tool that generates dual-theme (light/dark) design tokens from a single brand color, using the **OKLCH color space**.
 
-Eliminate visual subjectivity and artistic guesswork. `chroma.py` enforces deterministic spatial scales, accessible contrast normalization, and multi-tenant industry taxonomies natively from the command line.
+`chroma.py` derives a deterministic 12-step neutral scale and WCAG-checked contrast pairings from one hex value, and emits them under multiple naming taxonomies.
 
 ---
 
@@ -22,11 +22,11 @@ uv run python -m chroma 6366f1 --format css --output tokens.css
 
 ---
 
-## Architectural Pillars
+## How it works
 
-- **OKLCH Uniformity:** Built natively on Lightness, Chroma, and Hue (H). Shifting hue angles guarantees uniform perceptual brightness without introducing unintended visual spikes.
-- **The 12-Step Mathematical Scale:** Generates predictable lightness curves mapped directly to programmatic user interface layout layers.
-- **Deterministic Contrast Calibration:** Interpolation loops guarantee that foreground-to-background pairings clear strict **WCAG AAA contrast ratios (≥ 7:1)** for data-dense grids and numbers.
+- **OKLCH conversion:** Colors are converted to Lightness, Chroma, and Hue (H), so hue shifts keep perceptual brightness uniform.
+- **12-step scale:** The neutral and brand ramps use lightness curves mapped to UI layout layers.
+- **Contrast calibration:** Foreground-to-background pairings are interpolated to clear **WCAG AAA contrast ratios (≥ 7:1)**.
 
 ---
 
@@ -51,9 +51,9 @@ The single required argument is the brand **hex** color (e.g. `6366f1`); its hue
 
 ## Supported Taxonomies
 
-Specify your target front-end framework using the `--taxonomy` flag. The underlying mathematical scale remains pure, while the outer token keys morph to match your environment:
+Select a token naming scheme with the `--taxonomy` flag. The generated scale is identical across taxonomies; only the token keys change:
 
-- **`atmos` (Default):** Flat, high-density Systematic UI naming conventions (`bg-surface-default`, `text-foreground-primary`).
+- **`atmos` (Default):** Systematic UI naming conventions (`bg-surface-default`, `text-foreground-primary`).
 - **`m3`:** Google Material Design 3 contextual color role pairs over a linear sequential primitive ramp (`sys-color-surface-container-low`).
 - **`atlassian`:** Nested object dot-notation layout optimized for dense SaaS dashboard configurations (`background.elevation.surface`).
 - **`slds`:** Salesforce Lightning Design System 2 decoupled structural styling hooks (`color-neutral-base-20`).
