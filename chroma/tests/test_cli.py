@@ -135,6 +135,33 @@ class TestCLI(unittest.TestCase):
             self.assertTrue((Path(tmp) / "branding.js").exists())
             self.assertTrue((Path(tmp) / "branding.css").exists())
 
+    def test_output_creates_missing_parent_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "deep" / "nested" / "branding-tokens.json"
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main(["6366f1", "-f", "json", "-o", str(target)])
+            self.assertEqual(code, 0)
+            self.assertTrue(target.exists())
+            self.assertTrue((target.parent / "preview.html").exists())
+            self.assertIn("wrote", err.getvalue())
+
+    def test_v3_output_creates_missing_parent_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "deep" / "nested" / "tailwind.config.js"
+            code = main(["6366f1", "-o", str(target)])
+            self.assertEqual(code, 0)
+            self.assertTrue(target.exists())
+            self.assertTrue(target.with_suffix(".css").exists())
+
+    def test_figma_output_creates_missing_parent_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "deep" / "nested" / "theme.json"
+            code = main(["6366f1", "-f", "figma", "-o", str(target)])
+            self.assertEqual(code, 0)
+            self.assertTrue((target.parent / "theme.light.json").exists())
+            self.assertTrue((target.parent / "theme.dark.json").exists())
+
     def test_invalid_hex_exits_2(self):
         err = io.StringIO()
         with redirect_stderr(err):

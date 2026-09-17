@@ -19,6 +19,7 @@ from chroma.serializers import (
     emit_tailwind,
     emit_tailwind_v3,
     serialize_preview,
+    write_output,
 )
 from chroma.taxonomy import TAXONOMIES, get_taxonomy
 from chroma.tokens import STATUS_FAMILIES, build_layers, verify_contrast
@@ -226,13 +227,14 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:
             is_same = str(preview_path) == str(out_path)
         if not is_same:
-            preview_path.write_text(
+            write_output(
+                preview_path,
                 serialize_preview(
                     layers,
                     args.hex,
                     preserve_vibrancy=args.preserve_vibrancy,
                     taxonomy=args.taxonomy,
-                )
+                ),
             )
             print(f"wrote {preview_path}", file=sys.stderr)
     return 0

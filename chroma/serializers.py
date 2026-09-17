@@ -464,6 +464,12 @@ def serialize_tailwind_v4_css(
     return "\n".join(lines)
 
 
+def write_output(path: Path, text: str) -> None:
+    """Write ``text`` to ``path``, creating any missing parent directories."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
 def _emit_v3_files(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str,
@@ -474,8 +480,10 @@ def _emit_v3_files(
     path = Path(output)
     config = path if path.suffix == ".js" else path.with_suffix(".js")
     companion = config.with_suffix(".css")
-    config.write_text(serialize_tailwind_v3_config(taxonomy))
-    companion.write_text(serialize_tailwind_v3_css(layers, preserve_vibrancy, taxonomy))
+    write_output(config, serialize_tailwind_v3_config(taxonomy))
+    write_output(
+        companion, serialize_tailwind_v3_css(layers, preserve_vibrancy, taxonomy)
+    )
     print(f"wrote {config}", file=sys.stderr)
     print(f"wrote {companion}", file=sys.stderr)
 
@@ -497,7 +505,9 @@ def emit_tailwind(
         return
     path = Path(output)
     if path.suffix == ".css":
-        path.write_text(serialize_tailwind_v4_css(layers, preserve_vibrancy, taxonomy))
+        write_output(
+            path, serialize_tailwind_v4_css(layers, preserve_vibrancy, taxonomy)
+        )
         print(f"wrote {path}", file=sys.stderr)
         return
     _emit_v3_files(layers, output, preserve_vibrancy, taxonomy)
@@ -717,8 +727,9 @@ def emit_figma(
         return
     for theme_name in _THEME_ORDER:
         path = _figma_target(output, theme_name)
-        path.write_text(
-            serialize_figma_mode(layers, theme_name, preserve_vibrancy, taxonomy)
+        write_output(
+            path,
+            serialize_figma_mode(layers, theme_name, preserve_vibrancy, taxonomy),
         )
         print(f"wrote {path}", file=sys.stderr)
 
@@ -1125,7 +1136,7 @@ def _emit_text(text: str, output: str | None) -> None:
         sys.stdout.write(text)
         return
     path = Path(output)
-    path.write_text(text)
+    write_output(path, text)
     print(f"wrote {path}", file=sys.stderr)
 
 
