@@ -101,6 +101,29 @@ class TestOKLCH(unittest.TestCase):
                     self, oklch_to_rgb(rgb_to_oklch(rgb)), rgb, abs_tol=0.001
                 )
 
+    def test_oklch_golden_values(self):
+        cases = {
+            (1, 0, 0): (0.6279553606, 0.2576833077, 29.2338851923),
+            (0, 1, 0): (0.8664396115, 0.2948272403, 142.4953388878),
+            (0, 0, 1): (0.4520137184, 0.3132143717, 264.0520206381),
+        }
+        for rgb, (want_l, want_c, want_h) in cases.items():
+            with self.subTest(rgb=rgb):
+                lightness, chroma_val, hue = rgb_to_oklch(rgb)
+                self.assertAlmostEqual(lightness, want_l, delta=1e-6)
+                self.assertAlmostEqual(chroma_val, want_c, delta=1e-6)
+                self.assertAlmostEqual(hue, want_h, delta=1e-3)
+
+    def test_oklch_to_rgb_golden_values(self):
+        cases = {
+            (0.6279553606, 0.2576833077, 29.2338851923): (1, 0, 0),
+            (0.8664396115, 0.2948272403, 142.4953388878): (0, 1, 0),
+            (0.4520137184, 0.3132143717, 264.0520206381): (0, 0, 1),
+        }
+        for oklch, want_rgb in cases.items():
+            with self.subTest(oklch=oklch):
+                assert_rgb_approx(self, oklch_to_rgb(oklch), want_rgb, abs_tol=1e-6)
+
     def test_to_rgb_clamps_gamut(self):
         rgb = oklch_to_rgb((0.7, 0.4, 200.0))
         for channel in rgb:
