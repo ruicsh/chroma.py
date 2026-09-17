@@ -70,22 +70,6 @@ STATUS_SPECS: dict[str, _StatusSpec] = {
     "info": {"hue": 250.0, "chroma": 0.130, "on": "white"},
 }
 
-# Full global token name set for the status families (solid + interaction +
-# tint coordinates), used by the tests and the exports.
-STATUS_TOKEN_NAMES: tuple[str, ...] = tuple(
-    name
-    for family in STATUS_FAMILIES
-    for name in (
-        family,
-        f"{family}-hover",
-        f"{family}-active",
-        f"{family}-on",
-        f"{family}-subtle",
-        f"{family}-border",
-        f"{family}-text",
-    )
-)
-
 # ---------------------------------------------------------------------------
 # Full 12-step shade scales (Radix 1–12) for the brand and each status family.
 # These are the raw ramps Step 2 of the Atmos article builds — the neutral
@@ -111,6 +95,12 @@ STATUS_COORD_NAMES: tuple[str, ...] = tuple(
     )
 )
 
+# Full current status global token name set (solid + interaction coordinates
+# plus the 12-step shade scales), used by the tests and the exports.
+STATUS_TOKEN_NAMES: tuple[str, ...] = tuple(
+    (*STATUS_COORD_NAMES, *STATUS_SCALE_NAMES)
+)
+
 # Adapted step legend: the article's 50–950 guide collapsed onto chroma's 1–12
 # Radix protocol. Each index's intent is documented here, on the preview ramp
 # cells, and in the README Global Tokens table. Source: Atmos Step 2.
@@ -128,12 +118,6 @@ SCALE_STEP_LEGEND: tuple[tuple[int, str], ...] = (
     (11, "Secondary / body text — strong emphasis"),
     (12, "Primary / headings — near-black, high-contrast text · darkest surfaces"),
 )
-
-# Rebind STATUS_TOKEN_NAMES to the full current status global set (coords + scales).
-# The original 7-token set (including subtle/border/text) is now represented via
-# scale steps; keeping the rebind avoids breaking the public export while the
-# concrete global set expands to brand + status scales.
-STATUS_TOKEN_NAMES = tuple(list(STATUS_COORD_NAMES) + list(STATUS_SCALE_NAMES))  # type: ignore[no-redef]
 
 
 @dataclass(frozen=True)
