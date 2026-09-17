@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import TypedDict
+from typing import Callable, TypedDict
 
 from chroma import __version__
 from chroma.color import parse_hex, rgb_to_hex, rgb_to_hsl, rgb_to_oklch
@@ -491,6 +491,7 @@ def _emit_v3_files(
 def emit_tailwind(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
+    brand_hex: str,
     preserve_vibrancy: bool = False,
     taxonomy: str = "atmos",
 ) -> None:
@@ -516,6 +517,7 @@ def emit_tailwind(
 def emit_tailwind_v3(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
+    brand_hex: str,
     preserve_vibrancy: bool = False,
     taxonomy: str = "atmos",
 ) -> None:
@@ -707,6 +709,7 @@ def _figma_target(output: str, theme_name: str) -> Path:
 def emit_figma(
     layers: dict[str, dict[str, dict[str, str]]],
     output: str | None,
+    brand_hex: str,
     preserve_vibrancy: bool = False,
     taxonomy: str = "atmos",
 ) -> None:
@@ -1140,72 +1143,58 @@ def _emit_text(text: str, output: str | None) -> None:
     print(f"wrote {path}", file=sys.stderr)
 
 
-def emit_json(
+def _emit_via(
+    serializer: Callable[..., str], *, needs_brand: bool = False
+) -> Callable[..., None]:
+    """Build a uniform ``FORMATS`` handler that writes one serialized document.
+
+    ``needs_brand`` marks serializers that embed the brand hex (json metadata,
+    preview header); the rest only need the layers and options.
+    """
+
+    def handler(
+        layers: dict[str, dict[str, dict[str, str]]],
+        output: str | None,
+        brand_hex: str,
+        preserve_vibrancy: bool = False,
+        taxonomy: str = "atmos",
+    ) -> None:
+        if needs_brand:
+            text = serializer(layers, brand_hex, preserve_vibrancy, taxonomy)
+        else:
+            text = serializer(layers, preserve_vibrancy, taxonomy)
+        _emit_text(text, output)
+
+    return handler
+
+
+# Every ``--format`` value the CLI accepts, mapped to a uniform handler with
+# signature ``(layers, output, brand_hex, preserve_vibrancy, taxonomy)``.
+# Simple formats wrap a single serializer via :func:`_emit_via`; the
+# multi-artifact formats (tailwind, tailwind-v3, figma) resolve their own
+# output targets and write several files.
+FORMATS: dict[str, Callable[..., None]] = {
+    "json": _emit_via(serialize_json, needs_brand=True),
+    "tailwind": emit_tailwind,
+    "tailwind-v3": emit_tailwind_v3,
+    "css": _emit_via(serialize_css),
+    "ts": _emit_via(serialize_ts),
+    "dtcg": _emit_via(serialize_dtcg),
+    "figma": emit_figma,
+    "sass": _emit_via(serialize_sass),
+    "less": _emit_via(serialize_less),
+    "stylus": _emit_via(serialize_stylus),
+    "preview": _emit_via(serialize_preview, needs_brand=True),
+}
+
+
+def emit(
+    format_name: str,
     layers: dict[str, dict[str, dict[str, str]]],
+    output: str | None,
     brand_hex: str,
-    output: str | None,
     preserve_vibrancy: bool = False,
     taxonomy: str = "atmos",
 ) -> None:
-    """Resolve the json format by output target."""
-    _emit_text(serialize_json(layers, brand_hex, preserve_vibrancy, taxonomy), output)
-
-
-def emit_css(
-    layers: dict[str, dict[str, dict[str, str]]],
-    output: str | None,
-    preserve_vibrancy: bool = False,
-    taxonomy: str = "atmos",
-) -> None:
-    """Resolve the css format by output target."""
-    _emit_text(serialize_css(layers, preserve_vibrancy, taxonomy), output)
-
-
-def emit_ts(
-    layers: dict[str, dict[str, dict[str, str]]],
-    output: str | None,
-    preserve_vibrancy: bool = False,
-    taxonomy: str = "atmos",
-) -> None:
-    """Resolve the ts format by output target."""
-    _emit_text(serialize_ts(layers, preserve_vibrancy, taxonomy), output)
-
-
-def emit_dtcg(
-    layers: dict[str, dict[str, dict[str, str]]],
-    output: str | None,
-    preserve_vibrancy: bool = False,
-    taxonomy: str = "atmos",
-) -> None:
-    """Resolve the dtcg format by output target."""
-    _emit_text(serialize_dtcg(layers, preserve_vibrancy, taxonomy), output)
-
-
-def emit_sass(
-    layers: dict[str, dict[str, dict[str, str]]],
-    output: str | None,
-    preserve_vibrancy: bool = False,
-    taxonomy: str = "atmos",
-) -> None:
-    """Resolve the sass format by output target."""
-    _emit_text(serialize_sass(layers, preserve_vibrancy, taxonomy), output)
-
-
-def emit_less(
-    layers: dict[str, dict[str, dict[str, str]]],
-    output: str | None,
-    preserve_vibrancy: bool = False,
-    taxonomy: str = "atmos",
-) -> None:
-    """Resolve the less format by output target."""
-    _emit_text(serialize_less(layers, preserve_vibrancy, taxonomy), output)
-
-
-def emit_stylus(
-    layers: dict[str, dict[str, dict[str, str]]],
-    output: str | None,
-    preserve_vibrancy: bool = False,
-    taxonomy: str = "atmos",
-) -> None:
-    """Resolve the stylus format by output target."""
-    _emit_text(serialize_stylus(layers, preserve_vibrancy, taxonomy), output)
+    """Emit ``format_name`` to stdout or ``output`` via the FORMATS registry."""
+    FORMATS[format_name](layers, output, brand_hex, preserve_vibrancy, taxonomy)

@@ -6,21 +6,7 @@ import argparse
 import sys
 
 from chroma.color import parse_hex, rgb_to_hex
-from chroma.serializers import (
-    emit_css,
-    emit_dtcg,
-    emit_figma,
-    emit_json,
-    emit_less,
-    emit_preview,
-    emit_sass,
-    emit_stylus,
-    emit_ts,
-    emit_tailwind,
-    emit_tailwind_v3,
-    serialize_preview,
-    write_output,
-)
+from chroma.serializers import FORMATS, emit, serialize_preview, write_output
 from chroma.taxonomy import TAXONOMIES, get_taxonomy
 from chroma.tokens import STATUS_FAMILIES, build_layers, verify_contrast
 
@@ -86,19 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "-f",
         "--format",
-        choices=(
-            "json",
-            "tailwind",
-            "tailwind-v3",
-            "css",
-            "ts",
-            "dtcg",
-            "figma",
-            "sass",
-            "less",
-            "stylus",
-            "preview",
-        ),
+        choices=tuple(FORMATS),
         default="tailwind",
         help="The configuration file target standard (Default: tailwind)",
     )
@@ -134,85 +108,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.preserve_vibrancy:
         _report_accent(args.hex, layers, taxonomy=args.taxonomy)
 
-    if args.format == "json":
-        emit_json(
-            layers,
-            args.hex,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "css":
-        emit_css(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "ts":
-        emit_ts(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "dtcg":
-        emit_dtcg(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "figma":
-        emit_figma(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "sass":
-        emit_sass(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "less":
-        emit_less(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "stylus":
-        emit_stylus(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "tailwind-v3":
-        emit_tailwind_v3(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    elif args.format == "preview":
-        emit_preview(
-            layers,
-            args.output,
-            args.hex,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
-    else:
-        emit_tailwind(
-            layers,
-            args.output,
-            preserve_vibrancy=args.preserve_vibrancy,
-            taxonomy=args.taxonomy,
-        )
+    emit(
+        args.format,
+        layers,
+        args.output,
+        args.hex,
+        preserve_vibrancy=args.preserve_vibrancy,
+        taxonomy=args.taxonomy,
+    )
 
     # When a theme file is created, also emit a visual preview alongside it.
     # The preview renders the active taxonomy's token names.
