@@ -2,7 +2,7 @@
 
 A CLI tool that generates dual-theme (light/dark) design tokens from a single brand color, using the **OKLCH color space**.
 
-`chroma.py` derives a deterministic 12-step neutral scale and WCAG-checked contrast pairings from one hex value, and emits them under multiple naming taxonomies.
+`chroma.py` derives deterministic 12-step neutral, brand, and semantic status ramps with WCAG-checked contrast pairings from one hex value, and emits them under multiple naming taxonomies.
 
 ---
 
@@ -26,6 +26,7 @@ uv run python -m chroma 6366f1 --format css --output tokens.css
 
 - **OKLCH conversion:** Colors are converted to Lightness, Chroma, and Hue (H), so hue shifts keep perceptual brightness uniform.
 - **12-step scale:** The neutral and brand ramps use lightness curves mapped to UI layout layers.
+- **Semantic status ramps:** Each status family (`success`, `warning`, `danger`, `info`) is anchored at a fixed OKLCH coordinate (step 9) and blends the brand into its surface steps (1–3) at 15%/10%/5% with a chroma cap, so alert tints carry the brand without losing family recognition.
 - **Contrast calibration:** Foreground-to-background pairings are interpolated to clear **WCAG AAA contrast ratios (≥ 7:1)**.
 
 ---
