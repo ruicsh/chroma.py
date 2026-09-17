@@ -6,12 +6,14 @@ from typing import cast
 from chroma.color import (
     contrast_ratio,
     hsl_to_rgb,
+    mix_oklch,
     oklch_to_rgb,
     parse_hex,
     relative_luminance,
     rgb_to_hex,
     rgb_to_hsl,
     rgb_to_oklch,
+    shortest_hue_delta,
 )
 
 
@@ -129,6 +131,42 @@ class TestOKLCH(unittest.TestCase):
         for channel in rgb:
             self.assertGreaterEqual(channel, -1e-9)
             self.assertLessEqual(channel, 1.0 + 1e-9)
+
+
+class TestOKLCHMix(unittest.TestCase):
+    def test_shortest_hue_delta_sign(self):
+        self.assertAlmostEqual(shortest_hue_delta(0.0, 90.0), 90.0)
+        self.assertAlmostEqual(shortest_hue_delta(90.0, 0.0), -90.0)
+        self.assertAlmostEqual(shortest_hue_delta(350.0, 10.0), 20.0)
+        self.assertAlmostEqual(shortest_hue_delta(10.0, 350.0), -20.0)
+        self.assertAlmostEqual(shortest_hue_delta(30.0, 30.0), 0.0)
+        # Exactly 180 degrees is ambiguous (equal arc both ways); the signed
+        # delta is defined as positive in the 0..360 direction.
+        self.assertAlmostEqual(shortest_hue_delta(0.0, 180.0), 180.0)
+        self.assertAlmostEqual(shortest_hue_delta(180.0, 0.0), 180.0)
+
+    def test_mix_extremes(self):
+        a = (0.3, 0.1, 30.0)
+        b = (0.7, 0.2, 90.0)
+        self.assertEqual(mix_oklch(a, b, 0.0), a)
+        self.assertEqual(mix_oklch(a, b, 1.0), b)
+
+    def test_mix_is_linear_in_lightness_and_chroma(self):
+        a = (0.3, 0.1, 10.0)
+        b = (0.7, 0.2, 350.0)
+        mid = mix_oklch(a, b, 0.5)
+        self.assertAlmostEqual(mid[0], 0.5, delta=1e-12)
+        self.assertAlmostEqual(mid[1], 0.15, delta=1e-12)
+        # Hue walks the short arc from 10 down through 0 to 350: half-way is 0.
+        self.assertAlmostEqual(mid[2], 0.0, delta=1e-9)
+
+    def test_mix_hue_wraps_shortest_way(self):
+        # Naive LERP would take hue from 350 to 10 via a +340 degree sweep;
+        # the mix must travel the -20 degree arc instead.
+        a = (0.5, 0.1, 350.0)
+        b = (0.5, 0.1, 10.0)
+        quarter = mix_oklch(a, b, 0.25)
+        self.assertAlmostEqual(quarter[2], 355.0, delta=1e-9)
 
 
 class TestContrast(unittest.TestCase):

@@ -199,6 +199,35 @@ def oklch_to_hex(lightness: float, chroma: float, hue: float) -> str:
     return rgb_to_hex(oklch_to_rgb((lightness, chroma, hue)))
 
 
+def shortest_hue_delta(first: float, second: float) -> float:
+    """Signed shortest angular distance from ``first`` to ``second`` (degrees).
+
+    Interpolating hue naively between two angles can wrap the long way around
+    the cylinder (e.g. 350 -> 10 becomes a 340 degree sweep). This returns the
+    signed delta in ``-180..180`` so blends travel the short arc.
+    """
+    delta = (second - first) % 360.0
+    return delta - 360.0 if delta > 180.0 else delta
+
+
+def mix_oklch(
+    first: tuple[float, float, float],
+    second: tuple[float, float, float],
+    weight: float,
+) -> tuple[float, float, float]:
+    """Blend two OKLCH coordinates by ``weight`` (0 -> ``first``, 1 -> ``second``).
+
+    Lightness and chroma interpolate linearly; hue interpolates along the
+    shortest angular distance so no rainbow shift is introduced. ``weight`` is
+    clamped to ``[0, 1]`` so the result always stays on the segment.
+    """
+    weight = min(max(weight, 0.0), 1.0)
+    lightness = first[0] + (second[0] - first[0]) * weight
+    chroma = first[1] + (second[1] - first[1]) * weight
+    hue = (first[2] + shortest_hue_delta(first[2], second[2]) * weight) % 360.0
+    return (lightness, chroma, hue)
+
+
 # ---------------------------------------------------------------------------
 # WCAG relative luminance / contrast
 # ---------------------------------------------------------------------------

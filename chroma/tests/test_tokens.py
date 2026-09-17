@@ -3,16 +3,24 @@
 import unittest
 
 from chroma import build_layers, verify_contrast
-from chroma.color import parse_hex, relative_luminance, rgb_to_oklch
+from chroma.color import (
+    parse_hex,
+    relative_luminance,
+    rgb_to_oklch,
+)
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
+    BRAND_DECAY_WEIGHTS,
     BRAND_SCALE_NAMES,
+    SEMANTIC_ANCHORS,
     STATUS_FAMILIES,
     STATUS_SPECS,
     STATUS_TOKEN_NAMES,
+    SURFACE_CHROMA_CAP,
     THEMES,
     _interp,
     accent_scale,
+    blend_semantic_ramp,
     brand_scale_names,
     brand_scale_steps,
     neutral_scale_names,
@@ -20,6 +28,8 @@ from chroma.tokens import (
     status_scale,
     status_scale_steps,
 )
+
+BRAND_OKLCH = rgb_to_oklch(parse_hex("6366f1"))
 
 BRANDS = (
     "6366f1",
@@ -242,8 +252,9 @@ class TestStatusScale(unittest.TestCase):
 
     def test_subtle_and_border_chroma_caps(self):
         # Under B1 the old subtle/border globals are removed; scale steps now
-        # carry the tints. Keep a regression check that the new scales stay
-        # within their peak chroma and that the removed globals no longer exist.
+        # carry the tints. The blended surface steps (1-3) are capped to the
+        # neutral surface chroma; the anchor steps (4-12) stay at or below the
+        # family's locked chroma.
         for theme_name in ("light", "dark"):
             scale = status_scale(THEMES[theme_name])
             with self.subTest(theme=theme_name):
@@ -252,16 +263,17 @@ class TestStatusScale(unittest.TestCase):
                     self.assertNotIn(f"{family}-border", scale)
                     self.assertNotIn(f"{family}-text", scale)
         for theme_name in ("light", "dark"):
-            steps = status_scale_steps(THEMES[theme_name])
+            steps = status_scale_steps(THEMES[theme_name], BRAND_OKLCH)
             with self.subTest(theme=theme_name):
                 for family in STATUS_FAMILIES:
                     peak = STATUS_SPECS[family]["chroma"]
-                    # dark theme scales back ~10%
-                    expected_peak = peak * (0.9 if theme_name == "dark" else 1.0)
                     for step in range(1, 13):
                         c = steps[f"{family}-{step}"][1]
-                        self.assertLessEqual(c, expected_peak + 1e-9)
                         self.assertGreaterEqual(c, 0.0)
+                        if step <= 3:
+                            self.assertLessEqual(c, SURFACE_CHROMA_CAP + 1e-9)
+                        else:
+                            self.assertLessEqual(c, peak + 1e-9)
 
 
 class TestColorRamps(unittest.TestCase):
@@ -278,10 +290,12 @@ class TestColorRamps(unittest.TestCase):
 
     def test_status_scale_hue_locked(self):
         for theme_name in ("light", "dark"):
-            ramp = status_scale_steps(THEMES[theme_name])
+            ramp = status_scale_steps(THEMES[theme_name], BRAND_OKLCH)
             with self.subTest(theme=theme_name):
                 for family, spec in STATUS_SPECS.items():
-                    for step in range(1, 13):
+                    # Steps 4-12 are brand-isolated: hue stays locked to the
+                    # anchor. Steps 1-3 are brand-blended, so their hue may move.
+                    for step in range(4, 13):
                         self.assertAlmostEqual(
                             ramp[f"{family}-{step}"][2], spec["hue"], delta=1e-9
                         )
@@ -294,8 +308,8 @@ class TestColorRamps(unittest.TestCase):
                 brand_scale_steps(THEMES[theme_name], brand),
             )
             self.assertEqual(
-                status_scale_steps(THEMES[theme_name]),
-                status_scale_steps(THEMES[theme_name]),
+                status_scale_steps(THEMES[theme_name], BRAND_OKLCH),
+                status_scale_steps(THEMES[theme_name], BRAND_OKLCH),
             )
 
     def test_brand_scale_length(self):
@@ -303,6 +317,104 @@ class TestColorRamps(unittest.TestCase):
             ramp = brand_scale_steps(THEMES[theme_name], parse_hex("6366f1"))
             self.assertEqual(len(ramp), 12)
             self.assertEqual(set(ramp), set(BRAND_SCALE_NAMES))
+
+
+class TestBlendSemanticRamp(unittest.TestCase):
+    def test_anchors_are_hardcoded_coordinates(self):
+        expected = {
+            "danger": (0.62, 0.22, 25.0),
+            "warning": (0.79, 0.18, 85.0),
+            "success": (0.65, 0.16, 145.0),
+            "info": (0.60, 0.16, 250.0),
+        }
+        self.assertEqual(SEMANTIC_ANCHORS, expected)
+        self.assertEqual(BRAND_DECAY_WEIGHTS, {1: 0.15, 2: 0.10, 3: 0.05})
+        self.assertEqual(SURFACE_CHROMA_CAP, 0.026)
+        # STATUS_SPECS is derived from the anchors: same lightness/hue/chroma.
+        for family, anchor in SEMANTIC_ANCHORS.items():
+            spec = STATUS_SPECS[family]
+            self.assertEqual((spec["lightness"], spec["chroma"], spec["hue"]), anchor)
+
+    def test_returns_twelve_steps(self):
+        for family, anchor in SEMANTIC_ANCHORS.items():
+            with self.subTest(family=family):
+                ramp = blend_semantic_ramp(BRAND_OKLCH, anchor)
+                self.assertEqual(len(ramp), 12)
+                self.assertEqual(set(ramp), {f"step-{i}" for i in range(1, 13)})
+
+    def test_anchor_locked_at_step_nine(self):
+        for family, anchor in SEMANTIC_ANCHORS.items():
+            with self.subTest(family=family):
+                ramp = blend_semantic_ramp(BRAND_OKLCH, anchor)
+                self.assertEqual(ramp["step-9"], anchor)
+
+    def test_surface_steps_are_exact_weighted_average_of_brand(self):
+        # The pure step is brand-independent, so the difference between two
+        # brands' blended steps isolates the brand's contribution: it must be
+        # exactly ``weight * (brand_b - brand_a)``. This only holds while the
+        # monotonic clamp does not engage, so the brands are picked above the
+        # clamp threshold for the info anchor (see test_lightness_is_monotonic).
+        anchor = SEMANTIC_ANCHORS["info"]
+        first = (0.30, 0.02, 200.0)
+        second = (0.80, 0.04, 200.0)
+        ramp_first = blend_semantic_ramp(first, anchor)
+        ramp_second = blend_semantic_ramp(second, anchor)
+        for step, weight in BRAND_DECAY_WEIGHTS.items():
+            with self.subTest(step=step):
+                self.assertAlmostEqual(
+                    ramp_second[f"step-{step}"][0] - ramp_first[f"step-{step}"][0],
+                    (second[0] - first[0]) * weight,
+                    places=12,
+                )
+
+    def test_steps_four_to_twelve_are_brand_isolated(self):
+        anchor = SEMANTIC_ANCHORS["success"]
+        # Two wildly different brands must produce identical steps 4-12.
+        first = blend_semantic_ramp((0.40, 0.30, 200.0), anchor)
+        second = blend_semantic_ramp((0.90, 0.05, 20.0), anchor)
+        for step in range(4, 13):
+            with self.subTest(step=step):
+                self.assertEqual(first[f"step-{step}"], second[f"step-{step}"])
+
+    def test_hue_blend_takes_shortest_path(self):
+        # Base hue 10, brand hue 350: naive interpolation sweeps +340 degrees;
+        # the shortest path is -20, so step 1 lands just below 10 (near 0), not
+        # near the 180-degree midpoint.
+        base = (0.60, 0.20, 10.0)
+        brand = (0.60, 0.20, 350.0)
+        ramp = blend_semantic_ramp(brand, base)
+        hue = ramp["step-1"][2]
+        self.assertGreater(hue, 0.0)
+        self.assertLess(hue, 10.0)
+        self.assertAlmostEqual(hue, 10.0 - 20.0 * BRAND_DECAY_WEIGHTS[1], delta=1e-9)
+
+    def test_surface_chroma_is_capped(self):
+        # A high-chroma brand must not push the surface steps past the cap.
+        brand = (0.70, 0.37, 330.0)
+        for anchor in SEMANTIC_ANCHORS.values():
+            ramp = blend_semantic_ramp(brand, anchor)
+            for step in (1, 2, 3):
+                self.assertLessEqual(ramp[f"step-{step}"][1], SURFACE_CHROMA_CAP)
+
+    def test_lightness_is_monotonic(self):
+        # A very dark brand must not invert the surface ladder: steps 1-3 blend
+        # toward the brand at 15%/10%/5%, which can drag step 1 past step 3 in
+        # the light theme. Sweep brand lightness across both theme directions.
+        for brand_lightness in (0.0, 0.1, 0.5, 1.0):
+            brand = (brand_lightness, 0.10, 200.0)
+            for theme_name in ("light", "dark"):
+                ramp = status_scale_steps(THEMES[theme_name], brand)
+                for family in STATUS_FAMILIES:
+                    values = [ramp[f"{family}-{i}"][0] for i in range(1, 13)]
+                    with self.subTest(
+                        brand_lightness=brand_lightness,
+                        theme=theme_name,
+                        family=family,
+                    ):
+                        if theme_name == "dark":
+                            self.assertEqual(values, sorted(values))
+                        else:
+                            self.assertEqual(values, sorted(values, reverse=True))
 
 
 class TestContrastGuarantees(unittest.TestCase):
