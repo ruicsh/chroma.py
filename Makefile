@@ -1,16 +1,19 @@
-.PHONY: lint format typecheck test run check samples clean
+.PHONY: lint format typecheck test contrast run check samples clean
 
 lint:
-	uv run ruff check chroma/
+	uv run ruff check chroma/ assert_contrast.py
 
 format:
-	uv run ruff format chroma/
+	uv run ruff format chroma/ assert_contrast.py
 
 typecheck:
-	uv run pyright chroma/
+	uv run pyright chroma/ assert_contrast.py
 
 test:
 	uv run python -m unittest discover -v -s chroma/tests
+
+contrast:
+	uv run python assert_contrast.py
 
 run:
 	uv run python -m chroma $(or $(filter-out $@,$(MAKECMDGOALS)),6366f1) -f preview -o preview.html
@@ -37,7 +40,7 @@ samples:
 %:
 	@true
 
-check: lint format typecheck test
+check: lint format typecheck test contrast
 	@echo "All checks passed."
 
 clean:

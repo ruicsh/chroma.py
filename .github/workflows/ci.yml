@@ -30,13 +30,16 @@ jobs:
         run: uv sync
 
       - name: Lint
-        run: uv run ruff check chroma/
+        run: uv run ruff check chroma/ assert_contrast.py
 
       - name: Check formatting
-        run: uv run ruff format --check chroma/
+        run: uv run ruff format --check chroma/ assert_contrast.py
 
       - name: Type check
-        run: uv run pyright chroma/
+        run: uv run pyright chroma/ assert_contrast.py
 
       - name: Test
         run: uv run python -m unittest discover -v -s chroma/tests
+
+      - name: Contrast guarantee proof
+        run: uv run python assert_contrast.py

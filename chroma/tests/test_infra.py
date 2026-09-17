@@ -32,6 +32,7 @@ class TestInfra(unittest.TestCase):
             "ruff format --check chroma/",
             "pyright chroma/",
             "unittest discover",
+            "python assert_contrast.py",
         ):
             self.assertIn(step, ci, f"CI is missing gate: {step}")
 
@@ -41,7 +42,7 @@ class TestInfra(unittest.TestCase):
         self.assertIsNotNone(match, "check target not found in Makefile")
         assert match is not None
         prerequisites = match.group(1)
-        for gate in ("lint", "format", "typecheck", "test"):
+        for gate in ("lint", "format", "typecheck", "test", "contrast"):
             self.assertIn(gate, prerequisites, f"check target is missing gate: {gate}")
 
     def test_hatch_version_source_matches_package(self):
