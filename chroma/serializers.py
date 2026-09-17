@@ -21,18 +21,17 @@ from typing import Callable, TypedDict
 
 from chroma import __version__
 from chroma.color import parse_hex, rgb_to_hex, rgb_to_hsl, rgb_to_oklch
+from chroma.semantic import STATUS_COORD_NAMES, STATUS_SCALE_NAMES
 from chroma.taxonomy import (
     CANONICAL_GLOBAL,
     CANONICAL_SEMANTIC,
+    STATUS_FAMILIES as _TOKENS_STATUS_FAMILIES,
     TAXONOMIES,
     get_taxonomy,
 )
+from chroma.theme import THEMES
 from chroma.tokens import (
     CANONICAL_SEMANTIC_TO_GLOBAL,
-    STATUS_COORD_NAMES,
-    STATUS_FAMILIES as _TOKENS_STATUS_FAMILIES,
-    STATUS_SCALE_NAMES,
-    THEMES,
     brand_scale_names,
     neutral_scale_names,
     semantic_to_global,

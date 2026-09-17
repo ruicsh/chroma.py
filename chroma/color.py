@@ -247,3 +247,50 @@ def contrast_ratio(
     lum_b = relative_luminance(second)
     lighter, darker = max(lum_a, lum_b), min(lum_a, lum_b)
     return (lighter + 0.05) / (darker + 0.05)
+
+
+# ---------------------------------------------------------------------------
+# Interpolation / contrast-solved lightness helpers
+# ---------------------------------------------------------------------------
+
+
+def _interp(controls: tuple[tuple[float, float], ...], x: float) -> float:
+    """Monotone piecewise-linear interpolation over control points."""
+    if x <= controls[0][0]:
+        return controls[0][1]
+    if x >= controls[-1][0]:
+        return controls[-1][1]
+    for (x0, y0), (x1, y1) in zip(controls, controls[1:]):
+        if x0 <= x <= x1:
+            span = x1 - x0
+            return y0 + (y1 - y0) * ((x - x0) / span) if span else y0
+    raise AssertionError("unreachable")  # pragma: no cover
+
+
+def _normalize_lightness(
+    lightness: float,
+    chroma: float,
+    hue: float,
+    on_rgb: tuple[float, float, float],
+    target: float,
+) -> float:
+    """Shift lightness until the color clears ``target`` contrast vs ``on_rgb``.
+
+    Hue and chroma are preserved; only perceptual lightness is moved along the
+    monotonic contrast slope toward the on-color.
+    """
+
+    def contrast_at(lightness: float) -> float:
+        return contrast_ratio(oklch_to_rgb((lightness, chroma, hue)), on_rgb)
+
+    if contrast_at(lightness) >= target:
+        return lightness
+    on_is_light = relative_luminance(on_rgb) > 0.5
+    lo, hi = (0.02, lightness) if on_is_light else (lightness, 0.98)
+    for _ in range(48):
+        mid = (lo + hi) / 2
+        if contrast_at(mid) >= target:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0

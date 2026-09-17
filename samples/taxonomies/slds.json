@@ -1,7 +1,7 @@
 {
   "meta": {
     "input": "6366f1",
-    "engine": "chroma.py 1.2.0",
+    "engine": "chroma.py 2.0.0",
     "brand": {
       "oklch": [
         0.5854,

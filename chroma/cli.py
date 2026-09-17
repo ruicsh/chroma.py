@@ -7,8 +7,8 @@ import sys
 
 from chroma.color import parse_hex, rgb_to_hex
 from chroma.serializers import FORMATS, emit, serialize_preview, write_output
-from chroma.taxonomy import TAXONOMIES, get_taxonomy
-from chroma.tokens import STATUS_FAMILIES, build_layers, verify_contrast
+from chroma.taxonomy import STATUS_FAMILIES, TAXONOMIES, get_taxonomy
+from chroma.tokens import build_layers, verify_contrast
 
 
 def _report_accent(

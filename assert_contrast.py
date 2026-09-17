@@ -23,7 +23,7 @@ This is a CI gate, not a spot check. It proves, in order:
     and every taxonomy, the accent on-color label clears AAA (>= 7:1) against
     every action state, and the status text / on-color labels clear WCAG AA
     (>= 4.5) against their surfaces. Status is AA by design (see
-    ``chroma.tokens._STATUS_TARGET``); the accent guarantee is corpus-verified
+    ``chroma.semantic._STATUS_TARGET``); the accent guarantee is corpus-verified
     because a +10% chroma shift on an arbitrary out-of-gamut coordinate can
     move the hover sRGB luminance below the target.
 

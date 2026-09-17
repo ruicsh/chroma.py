@@ -7,7 +7,7 @@ tokens under the naming of any supported design framework (Atmos, Material 3,
 Atlassian, Salesforce SLDS, Adobe Spectrum Core) via the ``-t`` taxonomy flag.
 """
 
-__version__ = "1.2.0"
+__version__ = "2.0.0"
 
 from chroma.color import (
     contrast_ratio,
@@ -39,42 +39,42 @@ from chroma.serializers import (
     serialize_tailwind_v4_css,
     serialize_ts,
 )
+from chroma.semantic import (
+    BRAND_DECAY_WEIGHTS,
+    SEMANTIC_ANCHORS,
+    STATUS_COORD_NAMES,
+    STATUS_SCALE_NAMES,
+    STATUS_SPECS,
+    STATUS_TOKEN_NAMES,
+    SURFACE_CHROMA_CAP,
+    blend_semantic_ramp,
+    status_scale,
+    status_scale_steps,
+)
 from chroma.taxonomy import (
     CANONICAL_GLOBAL,
     CANONICAL_SEMANTIC,
+    STATUS_FAMILIES,
     TAXONOMIES,
     TAXONOMY_REGISTRY,
     TaxonomySpec,
     get_taxonomy,
     sanitize_token,
 )
+from chroma.theme import DARK, LIGHT, THEMES
 from chroma.tokens import (
     ACCENT_TOKEN_NAMES,
-    BRAND_DECAY_WEIGHTS,
     BRAND_SCALE_NAMES,
     CANONICAL_SEMANTIC_TO_GLOBAL,
-    DARK,
-    LIGHT,
     SCALE_STEP_LEGEND,
-    SEMANTIC_ANCHORS,
     SEMANTIC_TO_GLOBAL,
-    STATUS_COORD_NAMES,
-    STATUS_FAMILIES,
-    STATUS_SCALE_NAMES,
-    STATUS_SPECS,
-    STATUS_TOKEN_NAMES,
     STEP_KEYS,
-    SURFACE_CHROMA_CAP,
-    THEMES,
     accent_scale,
-    blend_semantic_ramp,
     brand_scale_steps,
     build_layers,
     color_ramp,
     neutral_steps,
     semantic_to_global,
-    status_scale,
-    status_scale_steps,
     verify_contrast,
 )
 
