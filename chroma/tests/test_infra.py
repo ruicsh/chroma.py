@@ -18,6 +18,7 @@ class TestInfra(unittest.TestCase):
         pyproject = _read("pyproject.toml")
         match = re.search(r'requires-python\s*=\s*">=([0-9.]+)"', pyproject)
         self.assertIsNotNone(match, "requires-python floor not found in pyproject.toml")
+        assert match is not None
         floor = match.group(1)
         ci = _read(".github/workflows/ci.yml")
         self.assertIn(
@@ -38,6 +39,7 @@ class TestInfra(unittest.TestCase):
         makefile = _read("Makefile")
         match = re.search(r"^check:(.*)$", makefile, re.MULTILINE)
         self.assertIsNotNone(match, "check target not found in Makefile")
+        assert match is not None
         prerequisites = match.group(1)
         for gate in ("lint", "format", "typecheck", "test"):
             self.assertIn(gate, prerequisites, f"check target is missing gate: {gate}")
@@ -48,12 +50,14 @@ class TestInfra(unittest.TestCase):
             r"\[tool\.hatch\.version\]\s*\n\s*path\s*=\s*\"([^\"]+)\"", pyproject
         )
         self.assertIsNotNone(match, "hatch version path not found in pyproject.toml")
+        assert match is not None
         source = ROOT / match.group(1)
         self.assertTrue(
             source.exists(), f"version source {match.group(1)} does not exist"
         )
         version = re.search(r'__version__\s*=\s*"([^"]+)"', source.read_text())
         self.assertIsNotNone(version, f"__version__ not found in {match.group(1)}")
+        assert version is not None
         self.assertRegex(version.group(1), r"^\d+\.\d+\.\d+$")
 
 
