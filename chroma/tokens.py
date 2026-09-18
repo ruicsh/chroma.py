@@ -41,7 +41,6 @@ from chroma.semantic import (
     STATUS_SPECS,
     STATUS_TOKEN_NAMES,
     SURFACE_CHROMA_CAP,
-    blend_semantic_ramp,
     status_scale,
     status_scale_steps,
 )
@@ -73,7 +72,6 @@ __all__ = [
     "SURFACE_CHROMA_CAP",
     "THEMES",
     "accent_scale",
-    "blend_semantic_ramp",
     "brand_scale_names",
     "brand_scale_steps",
     "build_layers",
@@ -367,7 +365,7 @@ def build_layers(
                 **neutral_steps(theme, hue),
                 **accent_scale(brand, preserve_vibrancy=preserve_vibrancy),
                 **brand_scale_steps(theme, brand),
-                **status_scale(theme),
+                **status_scale(),
                 **status_scale_steps(theme, brand_oklch),
             }.items()
         }

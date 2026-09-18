@@ -23,7 +23,7 @@ from chroma.color import (
     rgb_to_oklch,
 )
 from chroma.taxonomy import STATUS_FAMILIES
-from chroma.theme import LIGHT, ThemeSpec
+from chroma.theme import ThemeSpec
 
 _STATUS_AA = 4.5  # status solid / text on-color floor (WCAG AA)
 _STATUS_TARGET = _STATUS_AA + 0.2  # headroom for status hover/active chroma shifts
@@ -202,21 +202,6 @@ def _semantic_ramp_theme(
     return {f"step-{step}": oklch for step, oklch in reversed(computed)}
 
 
-def blend_semantic_ramp(
-    brand_oklch: tuple[float, float, float],
-    semantic_base_oklch: tuple[float, float, float],
-) -> dict[str, tuple[float, float, float]]:
-    """Build a 12-step semantic ramp with the brand blended into its surfaces.
-
-    The scale runs light to dark (the light frame). Step 9 is the family's
-    locked anchor (its high-contrast interactive target) and steps 10-12 darken
-    past it. Steps 1-3 mix the brand coordinate in by the decay matrix
-    (15% / 10% / 5%) with shortest-path hue interpolation, then clamp chroma to
-    ``SURFACE_CHROMA_CAP``. Steps 4-12 carry 0% brand influence.
-    """
-    return _semantic_ramp_theme(brand_oklch, semantic_base_oklch, LIGHT)
-
-
 def status_scale_steps(
     theme: ThemeSpec,
     brand_oklch: tuple[float, float, float],
@@ -235,9 +220,7 @@ def status_scale_steps(
     return out
 
 
-def status_scale(
-    theme: ThemeSpec,
-) -> dict[str, tuple[float, float, float]]:
+def status_scale() -> dict[str, tuple[float, float, float]]:
     """Build the status family solid coordinates as ``{token: (L, C, H)}``.
 
     The four status families carry fixed, independent anchor coordinates. The
@@ -248,7 +231,6 @@ def status_scale(
     solid set.
     """
 
-    _ = theme  # theme-independent solids; kept for call-site symmetry
     tokens: dict[str, tuple[float, float, float]] = {}
     for family, spec in STATUS_SPECS.items():
         hue = spec["hue"]
