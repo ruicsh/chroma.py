@@ -43,6 +43,10 @@ SURFACE_CONCEPTS = (
     "bg-surface-hover",
     "bg-surface-active",
 )
+# The six surfaces the WCAG contrast guarantee is defined over: the five
+# aliased surfaces plus the computed overlay. Single source of truth for
+# ``verify_contrast`` and the CI proof (``assert_contrast.py``).
+CONTRAST_SURFACES: tuple[str, ...] = (*SURFACE_CONCEPTS, "bg-surface-overlay")
 BORDER_CONCEPTS = ("border-subtle", "border-default", "border-strong")
 TEXT_CONCEPTS = (
     "text-foreground-disabled",

@@ -46,6 +46,8 @@ from chroma.semantic import (
     status_scale_steps,
 )
 from chroma.taxonomy import (
+    ACTION_CONCEPTS,
+    CONTRAST_SURFACES,
     STATUS_FAMILIES,
     get_taxonomy,
 )
@@ -56,6 +58,7 @@ __all__ = [
     "BRAND_DECAY_WEIGHTS",
     "BRAND_SCALE_NAMES",
     "CANONICAL_SEMANTIC_TO_GLOBAL",
+    "CONTRAST_SURFACES",
     "DARK",
     "LIGHT",
     "SCALE_STEP_LEGEND",
@@ -411,15 +414,7 @@ def verify_contrast(
     def gp(primitive: str) -> str:
         return spec.global_primitive(primitive)
 
-    surface_concepts = (
-        "bg-surface-root",
-        "bg-surface-default",
-        "bg-surface-subtle",
-        "bg-surface-hover",
-        "bg-surface-active",
-        "bg-surface-overlay",
-    )
-    surfaces = tuple(n(c) for c in surface_concepts)
+    surfaces = tuple(n(c) for c in CONTRAST_SURFACES)
     texts = tuple(
         n(c)
         for c in (
@@ -438,7 +433,7 @@ def verify_contrast(
                 report[theme_name][f"{text}/{surface}"] = contrast_ratio(
                     parse_hex(semantic[text]), parse_hex(semantic[surface])
                 )
-        for state in ("bg-action-primary", "bg-action-hover", "bg-action-active"):
+        for state in ACTION_CONCEPTS:
             report[theme_name][f"{n('text-on-accent')}/{n(state)}"] = contrast_ratio(
                 parse_hex(semantic[n("text-on-accent")]),
                 parse_hex(semantic[n(state)]),

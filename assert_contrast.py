@@ -42,6 +42,12 @@ import sys
 
 from chroma import TAXONOMIES, build_layers, get_taxonomy, verify_contrast
 from chroma.color import contrast_ratio, oklch_to_rgb
+from chroma.taxonomy import (
+    ACTION_CONCEPTS,
+    CANONICAL_GLOBAL,
+    CONTRAST_SURFACES,
+    SURFACE_CONCEPTS,
+)
 from chroma.tokens import (
     CANONICAL_SEMANTIC_TO_GLOBAL,
     DARK,
@@ -71,18 +77,13 @@ BRAND_CORPUS: tuple[str, ...] = (
     "ffffff",  # white
 )
 
-# The six guaranteed background surfaces (canonical concept ids).
-SURFACE_CONCEPTS: tuple[str, ...] = (
-    "bg-surface-root",
-    "bg-surface-default",
-    "bg-surface-subtle",
-    "bg-surface-hover",
-    "bg-surface-active",
-    "bg-surface-overlay",
-)
+# The six guaranteed background surfaces (canonical concept ids) come from
+# ``chroma.taxonomy`` (``CONTRAST_SURFACES``), the single source of truth also
+# used by ``chroma.tokens.verify_contrast``.
 
-_ACTION_STATES = ("bg-action-primary", "bg-action-hover", "bg-action-active")
-_SURFACE_STEPS = (1, 2, 3, 4, 5)  # steps behind the five non-overlay surfaces
+# Steps behind the five non-overlay surfaces (the overlay is a computed
+# surface, not a neutral step).
+_SURFACE_STEPS: tuple[int, ...] = tuple(range(1, len(SURFACE_CONCEPTS) + 1))
 _MAX_DETAIL = 20
 
 
@@ -125,21 +126,25 @@ def check_value_invariance(report: Report) -> None:
                 ref_global = ref_layers[theme]["global"]
                 semantic = layers[theme]["semantic"]
                 global_tokens = layers[theme]["global"]
-                for concept, source in CANONICAL_SEMANTIC_TO_GLOBAL.items():
+                for concept in CANONICAL_SEMANTIC_TO_GLOBAL:
                     report.expect(
-                        semantic[spec.semantic_name(concept)]
-                        == ref_semantic[ref_spec.semantic_name(concept)],
+                        semantic.get(spec.semantic_name(concept))
+                        == ref_semantic.get(ref_spec.semantic_name(concept)),
                         f"semantic value drift: {brand}/{taxonomy}/{theme}/{concept}",
                     )
+                # Every canonical global primitive (all 92 emitted tokens: the
+                # 12 neutral steps, accent, 12 brand steps, status solids, and
+                # 48 status scale steps) must be byte-identical to Atmos.
+                for primitive in CANONICAL_GLOBAL:
                     report.expect(
-                        global_tokens[spec.global_primitive(source)]
-                        == ref_global[ref_spec.global_primitive(source)],
-                        f"global value drift: {brand}/{taxonomy}/{theme}/{source}",
+                        global_tokens.get(spec.global_primitive(primitive))
+                        == ref_global.get(ref_spec.global_primitive(primitive)),
+                        f"global value drift: {brand}/{taxonomy}/{theme}/{primitive}",
                     )
                 overlay = "bg-surface-overlay"
                 report.expect(
-                    semantic[spec.semantic_name(overlay)]
-                    == ref_semantic[ref_spec.semantic_name(overlay)],
+                    semantic.get(spec.semantic_name(overlay))
+                    == ref_semantic.get(ref_spec.semantic_name(overlay)),
                     f"semantic value drift: {brand}/{taxonomy}/{theme}/{overlay}",
                 )
                 ref_values = sorted(
@@ -194,21 +199,21 @@ def check_corpus_guarantees(report: Report) -> None:
             for theme in ("light", "dark"):
                 pairings = ratios[theme]
                 on_accent = spec.semantic_name("text-on-accent")
-                for state in _ACTION_STATES:
+                for state in ACTION_CONCEPTS:
                     label = f"{on_accent}/{spec.semantic_name(state)}"
                     report.require(
                         pairings[label], AAA, f"{brand}/{taxonomy}/{theme}/{label}"
                     )
                 for concept in ("text-foreground-primary", "text-foreground-secondary"):
                     text = spec.semantic_name(concept)
-                    for surface in SURFACE_CONCEPTS:
+                    for surface in CONTRAST_SURFACES:
                         label = f"{text}/{spec.semantic_name(surface)}"
                         report.require(
                             pairings[label], AAA, f"{brand}/{taxonomy}/{theme}/{label}"
                         )
                 for family in STATUS_FAMILIES:
                     text = spec.semantic_name(f"text-{family}")
-                    for surface in SURFACE_CONCEPTS:
+                    for surface in CONTRAST_SURFACES:
                         label = f"{text}/{spec.semantic_name(surface)}"
                         report.require(
                             pairings[label], AA, f"{brand}/{taxonomy}/{theme}/{label}"
@@ -226,7 +231,7 @@ def check_preserve_vibrancy(report: Report) -> None:
     for brand in ("00ffff", "111827", "6366f1"):
         ratios = verify_contrast(build_layers(brand, preserve_vibrancy=True))
         for theme in ("light", "dark"):
-            for state in _ACTION_STATES:
+            for state in ACTION_CONCEPTS:
                 label = f"text-on-accent/{state}"
                 report.require(
                     ratios[theme][label],
